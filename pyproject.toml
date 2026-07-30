@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "taskhub"
+version = "0.1.0"
+description = "TaskHub task management API"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi[standard]>=0.111,<1.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.9,<3.0",
+    "mypy>=1.13,<2.0",
+    "pytest>=8.3,<10.0",
+    "pytest-asyncio>=0.24,<1.0",
+    "ruff>=0.8,<1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/taskhub"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src"]
+strict = true
+warn_unused_configs = true
