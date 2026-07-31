@@ -12,6 +12,10 @@ class LabelNotFoundError(Exception):
     """Raised when a label does not exist within the requested project."""
 
 
+class ProjectNotFoundError(Exception):
+    """Raised when a label operation targets an unknown project."""
+
+
 class LabelService:
     """Coordinate label use cases independently from HTTP delivery."""
 
@@ -20,6 +24,8 @@ class LabelService:
 
     async def create(self, project_id: UUID, data: LabelCreate) -> Label:
         """Create a label in a project."""
+        if not await self._repository.project_exists(project_id):
+            raise ProjectNotFoundError
         label = Label(
             id=uuid4(),
             project_id=project_id,

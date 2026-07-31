@@ -8,9 +8,9 @@ Accepted — 2026-07-31
 
 TaskHub starts as a FastAPI API with one `Label` resource, but the target system will later add database persistence and more task-management domains. The first slice needs a design that is easy to test and lets the persistence implementation change without coupling use cases to HTTP or SQLAlchemy.
 
-The initial delivery has no database. It needs an in-memory adapter scoped to a FastAPI application instance while keeping the future SQLAlchemy migration local to the persistence boundary.
+The initial delivery used an in-memory adapter. Task 2 now needs durable PostgreSQL persistence, schema migration, request-scoped transactions, and test isolation without making unit tests depend on Neon.
 
-There is also no Project module yet. A label's `project_id` is therefore a UUID namespace rather than a verified parent relationship until a database-backed Project feature exists.
+There is still no Project API. A minimal `ProjectModel` is therefore a persistence anchor only; labels validate that the parent row exists when created.
 
 ## Options considered
 
@@ -25,31 +25,32 @@ There is also no Project module yet. A label's `project_id` is therefore a UUID 
 Use a modular layered architecture inside `src/taskhub/modules/<feature>/`. For labels, the module contains:
 
 - a framework-free frozen `Label` entity;
-- a `LabelRepository` protocol and `InMemoryLabelRepository` adapter;
+- a `LabelRepository` protocol, an in-memory test adapter, and a SQLAlchemy adapter;
 - `LabelService` application use cases and domain exception;
 - Pydantic schemas for the HTTP contract;
 - FastAPI dependencies and an `APIRouter` delivery adapter.
 
-The application factory is the composition root. It creates `InMemoryLabelRepository` on `app.state`; FastAPI dependency functions provide it to `LabelService`, which is then injected into the router.
+The application factory is the composition root. Its lifespan creates an async SQLAlchemy engine and session factory on `app.state`. FastAPI dependencies yield one transaction-scoped session per request, compose `SQLAlchemyLabelRepository`, then provide it to `LabelService`.
 
 ## Rationale
 
-1. The service can be tested with the in-memory adapter without starting an HTTP server.
+1. The service can be tested with the in-memory adapter without starting an HTTP server, while database and HTTP integration tests run against a temporary migrated SQLite file.
 2. The router is responsible only for HTTP concerns, including translating a domain not-found error to 404.
-3. A future `SQLAlchemyLabelRepository` can implement the existing contract while keeping router and service interfaces stable.
-4. This adds only feature-local boundaries needed by the current requirements; it does not introduce a generic base repository before Task 2 has multiple persistence adapters.
+3. `SQLAlchemyLabelRepository` implements the existing contract while keeping router and service interfaces stable.
+4. A generic repository provides only shared ORM persistence primitives; Label-specific mapping and parent lookup remain in the feature adapter.
 
 ## Trade-offs
 
 - The Label feature has more files and explicit mapping than a router-only implementation.
-- The in-memory adapter is application-scoped but volatile and unsuitable for production persistence.
+- SQLAlchemy mapping introduces explicit domain/ORM conversion and migration maintenance.
+- The in-memory adapter is test-only and must not be selected by application runtime composition.
 - The service currently accepts validated Pydantic schemas. This avoids duplicate command DTOs while no non-HTTP caller exists; introduce framework-free commands only if a CLI, queue worker, or another delivery mechanism needs the same use cases.
 
 ## Consequences
 
-- **Positive:** HTTP, domain behavior, and persistence can be verified independently; dependency overrides make integration tests deterministic.
-- **Negative:** Feature authors must preserve the boundaries instead of placing convenience logic in routers.
-- **Mitigation:** Tests and code review check that routers contain no business rules, services do not import FastAPI, repositories do not know HTTP, and state is app-scoped rather than module-global.
+- **Positive:** HTTP, domain behavior, persistence, and migration behavior can be verified independently; dependency overrides and temporary migrated databases keep tests deterministic.
+- **Negative:** Feature authors must preserve the boundaries instead of placing convenience logic in routers, and must manually review generated migrations.
+- **Mitigation:** Tests and code review check that routers contain no business rules, services do not import FastAPI or SQLAlchemy, repositories do not know HTTP, migrations stay aligned with models, and state is app-scoped rather than module-global.
 
 ## Revisit triggers
 

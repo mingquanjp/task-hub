@@ -8,11 +8,19 @@ version = "0.1.0"
 description = "TaskHub task management API"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "alembic>=1.14,<2.0",
     "fastapi[standard]>=0.111,<1.0",
+    "email-validator>=2.2,<3.0",
+    "PyJWT>=2.9,<3.0",
+    "psycopg[binary]>=3.2,<4.0",
+    "pwdlib[argon2]>=0.2,<1.0",
+    "pydantic-settings>=2.7,<3.0",
+    "sqlalchemy[asyncio]>=2.0,<2.1",
 ]
 
 [dependency-groups]
 dev = [
+    "aiosqlite>=0.20,<1.0",
     "httpx2>=2.9,<3.0",
     "mypy>=1.13,<2.0",
     "pytest>=8.3,<10.0",

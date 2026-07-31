@@ -10,6 +10,9 @@ from taskhub.modules.labels.entities import Label
 class LabelRepository(Protocol):
     """Storage operations required by the label application service."""
 
+    async def project_exists(self, project_id: UUID) -> bool:
+        """Report whether the label's parent project exists."""
+
     async def create(self, label: Label) -> Label:
         """Store a new label."""
 
@@ -31,6 +34,10 @@ class InMemoryLabelRepository:
 
     def __init__(self) -> None:
         self._labels: dict[UUID, Label] = {}
+
+    async def project_exists(self, project_id: UUID) -> bool:
+        """Treat every UUID as a project in the unit-test-only adapter."""
+        return True
 
     async def create(self, label: Label) -> Label:
         """Store a new label."""
