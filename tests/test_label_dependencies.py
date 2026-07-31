@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from taskhub.application import create_app
+from taskhub.core.config import SecuritySettings
 from taskhub.modules.labels.dependencies import (
     LabelServiceDep,
     get_db_session,
@@ -51,17 +52,23 @@ def test_dependencies_build_a_sqlalchemy_repository_from_a_request_session() -> 
     assert service._repository is repository
 
 
-def test_each_application_builds_its_own_database_resources(database_url: str) -> None:
-    first_app = create_app(database_url=database_url)
-    second_app = create_app(database_url=database_url)
+def test_each_application_builds_its_own_database_resources(
+    database_url: str,
+    security_settings: SecuritySettings,
+) -> None:
+    first_app = create_app(database_url=database_url, security_settings=security_settings)
+    second_app = create_app(database_url=database_url, security_settings=security_settings)
 
     with TestClient(first_app), TestClient(second_app):
         assert first_app.state.engine is not second_app.state.engine
         assert first_app.state.session_factory is not second_app.state.session_factory
 
 
-def test_fastapi_resolves_the_label_service_dependency(database_url: str) -> None:
-    app = create_app(database_url=database_url)
+def test_fastapi_resolves_the_label_service_dependency(
+    database_url: str,
+    security_settings: SecuritySettings,
+) -> None:
+    app = create_app(database_url=database_url, security_settings=security_settings)
     session = MagicMock(spec=AsyncSession)
 
     async def override_db_session() -> object:

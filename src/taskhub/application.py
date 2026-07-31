@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from taskhub.api.router import router as api_router
-from taskhub.core.config import get_settings
+from taskhub.core.config import SecuritySettings, get_security_settings, get_settings
 from taskhub.infrastructure.database.session import Database
 
 
@@ -14,9 +14,11 @@ from taskhub.infrastructure.database.session import Database
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage application-scoped resources for the ASGI lifespan."""
     database_url = app.state.database_url or get_settings().database_url
+    security_settings = app.state.security_settings or get_security_settings()
     database = Database(database_url)
     app.state.engine = database.engine
     app.state.session_factory = database.session_factory
+    app.state.security_settings = security_settings
     app.state.core_started = True
     try:
         yield
@@ -25,7 +27,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await database.dispose()
 
 
-def create_app(*, database_url: str | None = None) -> FastAPI:
+def create_app(
+    *,
+    database_url: str | None = None,
+    security_settings: SecuritySettings | None = None,
+) -> FastAPI:
     """Create and configure the TaskHub FastAPI application."""
     app = FastAPI(
         title="TaskHub API",
@@ -34,5 +40,6 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.database_url = database_url
+    app.state.security_settings = security_settings
     app.include_router(api_router)
     return app

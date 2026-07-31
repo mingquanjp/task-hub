@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from taskhub.application import create_app
+from taskhub.core.config import SecuritySettings
 from taskhub.infrastructure.database.models import ProjectModel
 from taskhub.infrastructure.database.session import Database
 from taskhub.modules.labels.dependencies import get_label_repository
@@ -27,11 +28,14 @@ async def seed_project(database_url: str, project_id: UUID) -> None:
 
 
 @pytest.fixture
-def client(database_url: str) -> Generator[TestClient, None, None]:
+def client(
+    database_url: str,
+    security_settings: SecuritySettings,
+) -> Generator[TestClient, None, None]:
     """Run one application instance against a migrated temporary database."""
     project_id = uuid4()
     asyncio.run(seed_project(database_url, project_id))
-    app = create_app(database_url=database_url)
+    app = create_app(database_url=database_url, security_settings=security_settings)
     app.state.test_project_id = project_id
     with TestClient(app) as test_client:
         yield test_client
@@ -115,21 +119,31 @@ def test_create_label_returns_404_when_project_is_missing(client: TestClient) ->
     assert client.get(f"/api/v1/projects/{uuid4()}/labels").json() == []
 
 
-def test_label_data_persists_after_application_restart(database_url: str) -> None:
+def test_label_data_persists_after_application_restart(
+    database_url: str,
+    security_settings: SecuritySettings,
+) -> None:
     project_id = uuid4()
     asyncio.run(seed_project(database_url, project_id))
     path = f"/api/v1/projects/{project_id}/labels"
 
-    with TestClient(create_app(database_url=database_url)) as first_client:
+    with TestClient(
+        create_app(database_url=database_url, security_settings=security_settings)
+    ) as first_client:
         response = first_client.post(path, json={"name": "Backend", "color": "#1A73E8"})
         assert response.status_code == 201
 
-    with TestClient(create_app(database_url=database_url)) as second_client:
+    with TestClient(
+        create_app(database_url=database_url, security_settings=security_settings)
+    ) as second_client:
         assert len(second_client.get(path).json()) == 1
 
 
-def test_dependency_override_replaces_the_label_repository(database_url: str) -> None:
-    app = create_app(database_url=database_url)
+def test_dependency_override_replaces_the_label_repository(
+    database_url: str,
+    security_settings: SecuritySettings,
+) -> None:
+    app = create_app(database_url=database_url, security_settings=security_settings)
     override_repository = InMemoryLabelRepository()
     project_id = uuid4()
     path = f"/api/v1/projects/{project_id}/labels"

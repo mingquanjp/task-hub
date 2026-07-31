@@ -7,7 +7,13 @@ from sqlalchemy import inspect
 
 from taskhub.core.config import Settings
 from taskhub.infrastructure.database.base import Base
-from taskhub.infrastructure.database.models import LabelModel, ProjectModel
+from taskhub.infrastructure.database.models import (
+    LabelModel,
+    ProjectModel,
+    RefreshTokenModel,
+    UserModel,
+    UserRole,
+)
 from taskhub.infrastructure.database.session import Database
 
 
@@ -65,3 +71,45 @@ def test_project_and_label_models_have_a_bidirectional_relationship() -> None:
     assert project_labels.passive_deletes is True
     assert "delete-orphan" in project_labels.cascade
     assert inspect(LabelModel).relationships["project"].uselist is False
+
+
+def test_user_and_refresh_token_models_define_security_schema() -> None:
+    users = Base.metadata.tables["users"]
+    refresh_tokens = Base.metadata.tables["refresh_tokens"]
+
+    assert {column.name for column in users.columns} == {
+        "id",
+        "email",
+        "full_name",
+        "hashed_password",
+        "role",
+        "is_active",
+        "created_at",
+    }
+    assert users.c.email.nullable is False
+    assert users.c.hashed_password.nullable is False
+    assert users.c.email.unique is True
+    assert "ck_users_role_valid" in {constraint.name for constraint in users.constraints}
+    assert {column.name for column in refresh_tokens.columns} == {
+        "id",
+        "user_id",
+        "token_hash",
+        "expires_at",
+        "revoked_at",
+        "created_at",
+    }
+    foreign_key = next(iter(refresh_tokens.foreign_keys))
+    assert foreign_key.target_fullname == "users.id"
+    assert foreign_key.ondelete == "CASCADE"
+    assert refresh_tokens.c.token_hash.unique is True
+    assert UserModel(role=UserRole.MEMBER).role == UserRole.MEMBER
+
+
+def test_user_and_refresh_token_relationship_cascades() -> None:
+    user = UserModel(email="user@example.com", full_name="User", hashed_password="hash")
+    token = RefreshTokenModel(user=user, token_hash="a" * 64)
+
+    assert token.user is user
+    assert user.refresh_tokens == [token]
+    assert inspect(UserModel).relationships["refresh_tokens"].passive_deletes is True
+    assert "delete-orphan" in inspect(UserModel).relationships["refresh_tokens"].cascade

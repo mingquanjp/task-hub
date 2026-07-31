@@ -9,8 +9,9 @@ TaskHub is a FastAPI task-management API. It currently provides a database-backe
 - Project-scoped label CRUD with UUID path parameters.
 - Pydantic v2 validation: non-empty names up to 50 characters and normalized `#RRGGBB` colors.
 - PostgreSQL persistence with SQLAlchemy 2.x async, psycopg, and Alembic.
+- Authentication: user persistence, Argon2 password hashing, JWT access/refresh tokens, and register/login/refresh/logout flows.
 
-Authentication, Project API, workspaces, tasks, Redis, and Docker are intentionally outside the current scope.
+User profile, RBAC, Project API, workspaces, tasks, Redis, and Docker are intentionally outside the current scope. Authentication register/login/refresh/logout is now available.
 
 There is not yet a Project API, but the database validates the parent: creating a label for an unknown `project_id` returns `404`.
 
@@ -21,6 +22,8 @@ There is not yet a Project API, but the database validates the parent: creating 
 - A Neon PostgreSQL database.
 
 Copy `.env.example` to `.env` and add the Neon direct connection string. Keep its `sslmode=require` and `channel_binding=require` parameters unchanged.
+
+JWT authentication requires `JWT_SECRET_KEY` (at least 32 characters), `JWT_ALGORITHM=HS256`, and access/refresh expiry settings. Secrets are represented with `SecretStr`, are not logged, and must be replaced with deployment-specific values.
 
 ## Run locally
 
@@ -60,6 +63,10 @@ All label endpoints are tagged `labels` in Swagger. `project_id` and `label_id` 
 | Method | Path | Success | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/health` | 200 | Confirm the API is reachable. |
+| `POST` | `/api/v1/auth/register` | 201 | Register a member account. |
+| `POST` | `/api/v1/auth/login` | 200 | Issue access and refresh tokens. |
+| `POST` | `/api/v1/auth/refresh` | 200 | Rotate a refresh token. |
+| `POST` | `/api/v1/auth/logout` | 204 | Revoke a refresh token. |
 | `POST` | `/api/v1/projects/{project_id}/labels` | 201 | Create a label. |
 | `GET` | `/api/v1/projects/{project_id}/labels` | 200 | List labels for a project. |
 | `GET` | `/api/v1/projects/{project_id}/labels/{label_id}` | 200 | Get one label. |
@@ -170,7 +177,7 @@ uv run alembic upgrade head
 uv run alembic current --check-heads
 ```
 
-The initial migration creates `projects` and `labels`, including the foreign key and index on `labels.project_id`. Alembic autogenerate is a starting point only: every revision must be reviewed manually before it is applied. `InMemoryLabelRepository` remains only as a fast fake for unit tests and dependency-override tests; it is not used by the running application.
+The migrations create `projects`, `labels`, `users`, and `refresh_tokens`, including their foreign keys, cascade rules, role check, and indexes. Refresh tokens are represented by persisted hashes; raw token values are not stored. Alembic autogenerate is a starting point only: every revision must be reviewed manually before it is applied. `InMemoryLabelRepository` remains only as a fast fake for unit tests and dependency-override tests; it is not used by the running application.
 
 To verify rollback locally, run `uv run alembic downgrade -1`, then `uv run alembic upgrade head` again.
 
