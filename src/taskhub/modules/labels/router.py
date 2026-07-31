@@ -6,19 +6,29 @@ from fastapi import APIRouter, HTTPException, Response, status
 
 from taskhub.modules.labels.dependencies import LabelServiceDep
 from taskhub.modules.labels.schemas import LabelCreate, LabelResponse, LabelUpdate
-from taskhub.modules.labels.service import LabelNotFoundError
+from taskhub.modules.labels.service import LabelNotFoundError, ProjectNotFoundError
 
 router = APIRouter(prefix="/projects/{project_id}/labels", tags=["labels"])
 
 
-@router.post("", response_model=LabelResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=LabelResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={status.HTTP_404_NOT_FOUND: {"description": "Project not found"}},
+)
 async def create_label(
     project_id: UUID,
     data: LabelCreate,
     service: LabelServiceDep,
 ) -> LabelResponse:
     """Create a label in a project."""
-    return LabelResponse.model_validate(await service.create(project_id, data))
+    try:
+        return LabelResponse.model_validate(await service.create(project_id, data))
+    except ProjectNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        ) from exc
 
 
 @router.get("", response_model=list[LabelResponse])

@@ -1,34 +1,40 @@
 """Integration tests for the FastAPI application core."""
 
+from unittest.mock import AsyncMock
+
+import pytest
 from fastapi.testclient import TestClient
 
 from taskhub.api.v1.router import router as api_v1_router
 from taskhub.application import create_app
+from taskhub.infrastructure.database.session import Database
 from taskhub.modules.labels.router import router as labels_router
 
 
-def test_lifespan_manages_application_state() -> None:
+def test_lifespan_manages_application_state(database_url: str) -> None:
     """Startup and shutdown update application-scoped lifecycle state."""
-    app = create_app()
+    app = create_app(database_url=database_url)
 
     with TestClient(app):
         assert app.state.core_started is True
+        assert app.state.engine.url.get_backend_name() == "sqlite"
+        assert app.state.session_factory.kw["expire_on_commit"] is False
 
     assert app.state.core_started is False
 
 
-def test_health_check_returns_ok() -> None:
+def test_health_check_returns_ok(database_url: str) -> None:
     """The health endpoint is available while the application is running."""
-    with TestClient(create_app()) as client:
+    with TestClient(create_app(database_url=database_url)) as client:
         response = client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
-def test_documentation_endpoints_are_available() -> None:
+def test_documentation_endpoints_are_available(database_url: str) -> None:
     """FastAPI serves OpenAPI, Swagger UI, and ReDoc."""
-    with TestClient(create_app()) as client:
+    with TestClient(create_app(database_url=database_url)) as client:
         openapi_response = client.get("/openapi.json")
         docs_response = client.get("/docs")
         redoc_response = client.get("/redoc")
@@ -61,3 +67,16 @@ def test_router_composition_uses_the_expected_version_and_resource_prefixes() ->
     assert api_v1_router.prefix == "/api/v1"
     assert labels_router.prefix == "/projects/{project_id}/labels"
     assert labels_router.tags == ["labels"]
+
+
+def test_lifespan_disposes_the_database_engine(
+    database_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dispose = AsyncMock()
+    monkeypatch.setattr(Database, "dispose", dispose)
+
+    with TestClient(create_app(database_url=database_url)):
+        pass
+
+    dispose.assert_awaited_once()
