@@ -11,7 +11,7 @@ TaskHub is a FastAPI task-management API. It currently provides a database-backe
 - PostgreSQL persistence with SQLAlchemy 2.x async, psycopg, and Alembic.
 - Authentication: user persistence, Argon2 password hashing, JWT access/refresh tokens, and register/login/refresh/logout flows.
 
-User profile, RBAC, Project API, workspaces, tasks, Redis, and Docker are intentionally outside the current scope. Authentication register/login/refresh/logout is now available.
+User profile, RBAC, Project API, workspaces, tasks, Redis, and Docker are intentionally outside the current scope. Authentication register/login/refresh/logout and User Profile APIs are now available.
 
 There is not yet a Project API, but the database validates the parent: creating a label for an unknown `project_id` returns `404`.
 
@@ -67,6 +67,9 @@ All label endpoints are tagged `labels` in Swagger. `project_id` and `label_id` 
 | `POST` | `/api/v1/auth/login` | 200 | Issue access and refresh tokens. |
 | `POST` | `/api/v1/auth/refresh` | 200 | Rotate a refresh token. |
 | `POST` | `/api/v1/auth/logout` | 204 | Revoke a refresh token. |
+| `GET` | `/api/v1/users/me` | 200 | Get current user profile. |
+| `PATCH` | `/api/v1/users/me` | 200 | Partially update current user profile. |
+| `POST` | `/api/v1/users/me/change-password` | 204 | Change password and revoke refresh tokens. |
 | `POST` | `/api/v1/projects/{project_id}/labels` | 201 | Create a label. |
 | `GET` | `/api/v1/projects/{project_id}/labels` | 200 | List labels for a project. |
 | `GET` | `/api/v1/projects/{project_id}/labels/{label_id}` | 200 | Get one label. |

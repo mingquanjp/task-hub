@@ -22,6 +22,8 @@ class UserRepository(Protocol):
 
     async def create(self, user: User) -> User: ...
 
+    async def update(self, user: User) -> User: ...
+
 
 class RefreshTokenRepository(Protocol):
     """Persistence operations required by refresh-token lifecycle management."""
@@ -31,6 +33,8 @@ class RefreshTokenRepository(Protocol):
     async def create(self, token: RefreshToken) -> RefreshToken: ...
 
     async def revoke(self, token_id: UUID, revoked_at: datetime) -> bool: ...
+
+    async def revoke_all_for_user(self, user_id: UUID, revoked_at: datetime) -> int: ...
 
 
 class DuplicateEmailPersistenceError(Exception):
@@ -68,6 +72,25 @@ class SQLAlchemyUserRepository:
         except IntegrityError as exc:
             # The request-scoped DB dependency owns rollback after this domain error propagates.
             raise DuplicateEmailPersistenceError from exc
+
+    async def update(self, user: User) -> User:
+        statement = (
+            update(UserModel)
+            .where(UserModel.id == user.id)
+            .values(
+                email=user.email,
+                full_name=user.full_name,
+                hashed_password=user.hashed_password,
+                role=user.role,
+                is_active=user.is_active,
+            )
+        )
+        try:
+            await self._session.execute(statement)
+            await self._session.flush()
+        except IntegrityError as exc:
+            raise DuplicateEmailPersistenceError from exc
+        return user
 
     @staticmethod
     def _to_entity(model: UserModel) -> User:
@@ -117,6 +140,19 @@ class SQLAlchemyRefreshTokenRepository:
         result = await self._session.execute(statement)
         await self._session.flush()
         return getattr(result, "rowcount", 0) == 1
+
+    async def revoke_all_for_user(self, user_id: UUID, revoked_at: datetime) -> int:
+        statement = (
+            update(RefreshTokenModel)
+            .where(
+                RefreshTokenModel.user_id == user_id,
+                RefreshTokenModel.revoked_at.is_(None),
+            )
+            .values(revoked_at=revoked_at)
+        )
+        result = await self._session.execute(statement)
+        await self._session.flush()
+        return getattr(result, "rowcount", 0)
 
     @staticmethod
     def _to_entity(model: RefreshTokenModel) -> RefreshToken:

@@ -41,3 +41,19 @@ def test_token_service_rejects_expired_refresh_tokens() -> None:
 
     with pytest.raises(InvalidTokenErrorDomain):
         service.decode_refresh(pair.refresh_token)
+
+
+def test_token_service_decodes_access_token() -> None:
+    service = make_token_service()
+    user_id = uuid4()
+    pair = service.issue_pair(user_id)
+
+    assert service.decode_access(pair.access_token) == user_id
+
+
+def test_token_service_rejects_refresh_tokens_as_access_tokens() -> None:
+    service = make_token_service()
+    pair = service.issue_pair(uuid4())
+
+    with pytest.raises(InvalidTokenErrorDomain):
+        service.decode_access(pair.refresh_token)

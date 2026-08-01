@@ -65,6 +65,22 @@ class TokenService:
             refresh_expires_at=refresh_expires_at,
         )
 
+    def decode_access(self, token: str) -> UUID:
+        """Verify issuer, audience, signature, expiry and access-token type."""
+        try:
+            payload = jwt.decode(
+                token,
+                self._settings.jwt_secret_key.get_secret_value(),
+                algorithms=[self._settings.jwt_algorithm],
+                issuer=self._settings.jwt_issuer,
+                audience=self._settings.jwt_audience,
+            )
+            if payload.get("type") != "access":
+                raise InvalidTokenErrorDomain
+            return UUID(str(payload["sub"]))
+        except (InvalidTokenError, KeyError, TypeError, ValueError) as exc:
+            raise InvalidTokenErrorDomain from exc
+
     def decode_refresh(self, token: str) -> RefreshClaims:
         """Verify issuer, audience, signature, expiry and refresh-token type."""
         try:
