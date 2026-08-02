@@ -3,14 +3,7 @@
 from enum import StrEnum
 
 from taskhub.modules.auth.entities import UserRole
-
-
-class WorkspaceRole(StrEnum):
-    """Resource-level roles for workspace members."""
-
-    OWNER = "OWNER"
-    EDITOR = "EDITOR"
-    VIEWER = "VIEWER"
+from taskhub.modules.workspaces.entities import WorkspaceRole
 
 
 class ResourceAction(StrEnum):

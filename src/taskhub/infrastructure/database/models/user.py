@@ -15,6 +15,8 @@ from taskhub.modules.auth.entities import UserRole
 
 if TYPE_CHECKING:
     from taskhub.infrastructure.database.models.refresh_token import RefreshTokenModel
+    from taskhub.infrastructure.database.models.workspace import WorkspaceModel
+    from taskhub.infrastructure.database.models.workspace_member import WorkspaceMemberModel
 
 
 class UserModel(Base):
@@ -41,6 +43,14 @@ class UserModel(Base):
     )
 
     refresh_tokens: Mapped[list[RefreshTokenModel]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    owned_workspaces: Mapped[list[WorkspaceModel]] = relationship(
+        back_populates="owner",
+    )
+    workspace_memberships: Mapped[list[WorkspaceMemberModel]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
         passive_deletes=True,
