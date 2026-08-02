@@ -6,6 +6,13 @@ from uuid import uuid4
 
 from anyio import to_thread
 
+from taskhub.core.exceptions import (
+    InactiveUserError,
+    InvalidCredentialsError,
+    InvalidTokenError,
+    TokenRevokedError,
+    UserAlreadyExistsError,
+)
 from taskhub.core.passwords import PasswordHasher
 from taskhub.modules.auth.entities import RefreshToken, User, UserRole
 from taskhub.modules.auth.repository import (
@@ -14,22 +21,6 @@ from taskhub.modules.auth.repository import (
     UserRepository,
 )
 from taskhub.modules.auth.tokens import InvalidTokenErrorDomain, TokenService
-
-
-class UserAlreadyExistsError(Exception):
-    """Raised when registration uses an existing normalized email."""
-
-
-class InvalidCredentialsError(Exception):
-    """Raised without revealing whether an email or password was incorrect."""
-
-
-class InactiveUserError(Exception):
-    """Raised when an inactive identity attempts authentication."""
-
-
-class InvalidRefreshTokenError(Exception):
-    """Raised when a refresh token is invalid, expired or revoked."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,33 +88,31 @@ class AuthService:
                 self._token_service.hash_refresh_token(raw_refresh_token)
             )
         except InvalidTokenErrorDomain as exc:
-            raise InvalidRefreshTokenError from exc
+            raise InvalidTokenError from exc
         now = datetime.now(UTC)
-        if (
-            stored is None
-            or stored.id != claims.token_id
-            or stored.user_id != claims.user_id
-            or stored.revoked_at is not None
-            or self._as_utc(stored.expires_at) <= now
-        ):
-            raise InvalidRefreshTokenError
+        if stored is None or stored.id != claims.token_id or stored.user_id != claims.user_id:
+            raise InvalidTokenError
+        if stored.revoked_at is not None:
+            raise TokenRevokedError
+        if self._as_utc(stored.expires_at) <= now:
+            raise InvalidTokenError
         user = await self._users.get_by_id(claims.user_id)
         if user is None or not user.is_active:
-            raise InvalidRefreshTokenError
+            raise InvalidTokenError
         if not await self._refresh_tokens.revoke(stored.id, now):
-            raise InvalidRefreshTokenError
+            raise InvalidTokenError
         return await self._issue_credentials(user)
 
     async def logout(self, raw_refresh_token: str) -> None:
         try:
             claims = self._token_service.decode_refresh(raw_refresh_token)
         except InvalidTokenErrorDomain as exc:
-            raise InvalidRefreshTokenError from exc
+            raise InvalidTokenError from exc
         stored = await self._refresh_tokens.get_by_hash(
             self._token_service.hash_refresh_token(raw_refresh_token)
         )
         if stored is None or stored.id != claims.token_id or stored.user_id != claims.user_id:
-            raise InvalidRefreshTokenError
+            raise InvalidTokenError
         await self._refresh_tokens.revoke(stored.id, datetime.now(UTC))
 
     async def _issue_credentials(self, user: User) -> AuthResult:

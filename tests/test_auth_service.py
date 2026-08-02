@@ -7,15 +7,15 @@ import pytest
 from pydantic import SecretStr
 
 from taskhub.core.config import SecuritySettings
-from taskhub.core.passwords import PasswordHasher
-from taskhub.modules.auth.entities import User
-from taskhub.modules.auth.service import (
-    AuthService,
+from taskhub.core.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
-    InvalidRefreshTokenError,
+    TokenRevokedError,
     UserAlreadyExistsError,
 )
+from taskhub.core.passwords import PasswordHasher
+from taskhub.modules.auth.entities import User
+from taskhub.modules.auth.service import AuthService
 from taskhub.modules.auth.tokens import TokenService
 
 
@@ -98,11 +98,11 @@ async def test_login_refresh_rotates_and_logout_revokes_token() -> None:
     assert rotated.refresh_token != result.refresh_token
     assert len(tokens.tokens) == 2
 
-    with pytest.raises(InvalidRefreshTokenError):
+    with pytest.raises(TokenRevokedError):
         await service.refresh(result.refresh_token)
 
     await service.logout(rotated.refresh_token)
-    with pytest.raises(InvalidRefreshTokenError):
+    with pytest.raises(TokenRevokedError):
         await service.refresh(rotated.refresh_token)
 
 

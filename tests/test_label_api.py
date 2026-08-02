@@ -115,7 +115,7 @@ def test_create_label_returns_404_when_project_is_missing(client: TestClient) ->
     )
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Project not found"}
+    assert response.json()["code"] == "resource_not_found"
     assert client.get(f"/api/v1/projects/{uuid4()}/labels").json() == []
 
 

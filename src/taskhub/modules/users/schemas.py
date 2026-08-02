@@ -21,6 +21,8 @@ class UserProfileUpdate(BaseModel):
                 raise ValueError("email cannot be null")
             if "full_name" in data and data["full_name"] is None:
                 raise ValueError("full_name cannot be null")
+            if not any(k in data for k in ("email", "full_name")):
+                raise ValueError("At least one field must be provided for update")
         return data
 
     @field_validator("email")

@@ -6,6 +6,11 @@ from uuid import UUID
 
 from anyio import to_thread
 
+from taskhub.core.exceptions import (
+    IncorrectCurrentPasswordError,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
 from taskhub.core.passwords import PasswordHasher
 from taskhub.modules.auth.entities import User
 from taskhub.modules.auth.repository import (
@@ -13,18 +18,6 @@ from taskhub.modules.auth.repository import (
     RefreshTokenRepository,
     UserRepository,
 )
-
-
-class EmailAlreadyInUseError(Exception):
-    """Raised when an update attempts to use an email already claimed by another user."""
-
-
-class IncorrectCurrentPasswordError(Exception):
-    """Raised when attempting to change a password with an incorrect current password."""
-
-
-class UserNotFoundError(Exception):
-    """Raised when updating a user that no longer exists."""
 
 
 class UserService:
@@ -63,7 +56,7 @@ class UserService:
         try:
             return await self._users.update(user)
         except DuplicateEmailPersistenceError as exc:
-            raise EmailAlreadyInUseError from exc
+            raise UserAlreadyExistsError from exc
 
     async def change_password(
         self,

@@ -97,7 +97,7 @@ def test_invalid_login_returns_generic_401(auth_client: TestClient) -> None:
         json={"email": "unknown@example.com", "password": "wrong-password"},
     )
     assert response.status_code == 401
-    assert response.json() == {"detail": "Invalid email or password"}
+    assert response.json()["code"] == "invalid_credentials"
 
 
 def test_refresh_rejects_forged_access_and_malformed_tokens(auth_client: TestClient) -> None:

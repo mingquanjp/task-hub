@@ -5,14 +5,14 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from taskhub.core.exceptions import (
+    IncorrectCurrentPasswordError,
+    UserAlreadyExistsError,
+)
 from taskhub.core.passwords import PasswordHasher
 from taskhub.modules.auth.entities import RefreshToken, User, UserRole
 from taskhub.modules.auth.repository import DuplicateEmailPersistenceError
-from taskhub.modules.users.service import (
-    EmailAlreadyInUseError,
-    IncorrectCurrentPasswordError,
-    UserService,
-)
+from taskhub.modules.users.service import UserService
 
 
 class InMemoryUserRepository:
@@ -127,7 +127,7 @@ async def test_update_profile_duplicate_email(
     await users_repo.create(user)
     users_repo.should_raise_duplicate = True
 
-    with pytest.raises(EmailAlreadyInUseError):
+    with pytest.raises(UserAlreadyExistsError):
         await service.update_profile(user.id, email="other@example.com")
 
 

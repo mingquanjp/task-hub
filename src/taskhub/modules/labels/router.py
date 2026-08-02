@@ -2,11 +2,10 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Response, status
 
 from taskhub.modules.labels.dependencies import LabelServiceDep
 from taskhub.modules.labels.schemas import LabelCreate, LabelResponse, LabelUpdate
-from taskhub.modules.labels.service import LabelNotFoundError, ProjectNotFoundError
 
 router = APIRouter(prefix="/projects/{project_id}/labels", tags=["labels"])
 
@@ -23,12 +22,7 @@ async def create_label(
     service: LabelServiceDep,
 ) -> LabelResponse:
     """Create a label in a project."""
-    try:
-        return LabelResponse.model_validate(await service.create(project_id, data))
-    except ProjectNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-        ) from exc
+    return LabelResponse.model_validate(await service.create(project_id, data))
 
 
 @router.get("", response_model=list[LabelResponse])
@@ -50,12 +44,7 @@ async def get_label(
     service: LabelServiceDep,
 ) -> LabelResponse:
     """Get a label in a project."""
-    try:
-        return LabelResponse.model_validate(await service.get(project_id, label_id))
-    except LabelNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Label not found"
-        ) from exc
+    return LabelResponse.model_validate(await service.get(project_id, label_id))
 
 
 @router.patch(
@@ -70,12 +59,7 @@ async def update_label(
     service: LabelServiceDep,
 ) -> LabelResponse:
     """Partially update a label in a project."""
-    try:
-        return LabelResponse.model_validate(await service.update(project_id, label_id, data))
-    except LabelNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Label not found"
-        ) from exc
+    return LabelResponse.model_validate(await service.update(project_id, label_id, data))
 
 
 @router.delete(
@@ -85,10 +69,5 @@ async def update_label(
 )
 async def delete_label(project_id: UUID, label_id: UUID, service: LabelServiceDep) -> Response:
     """Delete a label in a project."""
-    try:
-        await service.delete(project_id, label_id)
-    except LabelNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Label not found"
-        ) from exc
+    await service.delete(project_id, label_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -4,9 +4,10 @@ from uuid import uuid4
 
 import pytest
 
+from taskhub.core.exceptions import ResourceNotFoundError
 from taskhub.modules.labels.repository import InMemoryLabelRepository
 from taskhub.modules.labels.schemas import LabelCreate, LabelUpdate
-from taskhub.modules.labels.service import LabelNotFoundError, LabelService, ProjectNotFoundError
+from taskhub.modules.labels.service import LabelService
 
 
 class MissingProjectRepository(InMemoryLabelRepository):
@@ -35,7 +36,7 @@ async def test_service_runs_label_lifecycle_with_partial_updates() -> None:
     assert await service.get(project_id, created.id) == updated
 
     await service.delete(project_id, created.id)
-    with pytest.raises(LabelNotFoundError):
+    with pytest.raises(ResourceNotFoundError):
         await service.get(project_id, created.id)
 
 
@@ -46,11 +47,11 @@ async def test_service_hides_labels_from_other_projects() -> None:
     other_project_id = uuid4()
     label = await service.create(owner_project_id, LabelCreate(name="Backend", color="#1A73E8"))
 
-    with pytest.raises(LabelNotFoundError):
+    with pytest.raises(ResourceNotFoundError):
         await service.get(other_project_id, label.id)
-    with pytest.raises(LabelNotFoundError):
+    with pytest.raises(ResourceNotFoundError):
         await service.update(other_project_id, label.id, LabelUpdate(name="Platform"))
-    with pytest.raises(LabelNotFoundError):
+    with pytest.raises(ResourceNotFoundError):
         await service.delete(other_project_id, label.id)
 
 
@@ -58,5 +59,5 @@ async def test_service_hides_labels_from_other_projects() -> None:
 async def test_service_rejects_creation_for_a_missing_project() -> None:
     service = LabelService(MissingProjectRepository())
 
-    with pytest.raises(ProjectNotFoundError):
+    with pytest.raises(ResourceNotFoundError):
         await service.create(uuid4(), LabelCreate(name="Backend", color="#1A73E8"))

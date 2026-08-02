@@ -5,10 +5,10 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
 from taskhub.core.config import SecuritySettings
+from taskhub.core.exceptions import InactiveUserError, InvalidTokenError
 from taskhub.modules.auth.dependencies import get_current_user
 from taskhub.modules.auth.entities import User, UserRole
 from taskhub.modules.auth.tokens import TokenService
@@ -71,11 +71,8 @@ async def test_get_current_user_missing_credentials(
 ) -> None:
     repo = FakeUserRepository(active_user)
 
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(InvalidTokenError):
         await get_current_user(None, token_service, repo)  # type: ignore[arg-type]
-
-    assert excinfo.value.status_code == 401
-    assert excinfo.value.headers == {"WWW-Authenticate": "Bearer"}
 
 
 @pytest.mark.asyncio
@@ -86,10 +83,8 @@ async def test_get_current_user_non_bearer(
     repo = FakeUserRepository(active_user)
     credentials = HTTPAuthorizationCredentials(scheme="Basic", credentials="abc")
 
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(InvalidTokenError):
         await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
-
-    assert excinfo.value.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -101,10 +96,8 @@ async def test_get_current_user_refresh_token_rejected(
     pair = token_service.issue_pair(active_user.id)
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=pair.refresh_token)
 
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(InvalidTokenError):
         await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
-
-    assert excinfo.value.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -115,10 +108,8 @@ async def test_get_current_user_malformed_jwt(
     repo = FakeUserRepository(active_user)
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="not-a-jwt")
 
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(InvalidTokenError):
         await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
-
-    assert excinfo.value.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -130,10 +121,8 @@ async def test_get_current_user_expired_jwt(
     pair = token_service.issue_pair(active_user.id, now=datetime.now(UTC) - timedelta(days=2))
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=pair.access_token)
 
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(InvalidTokenError):
         await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
-
-    assert excinfo.value.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -144,10 +133,8 @@ async def test_get_current_user_user_not_found(
     pair = token_service.issue_pair(uuid4())
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=pair.access_token)
 
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(InvalidTokenError):
         await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
-
-    assert excinfo.value.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -160,7 +147,5 @@ async def test_get_current_user_inactive(
     pair = token_service.issue_pair(active_user.id)
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=pair.access_token)
 
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(InactiveUserError):
         await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
-
-    assert excinfo.value.status_code == 403

@@ -3,17 +3,10 @@
 from dataclasses import replace
 from uuid import UUID, uuid4
 
+from taskhub.core.exceptions import ResourceNotFoundError
 from taskhub.modules.labels.entities import Label
 from taskhub.modules.labels.repository import LabelRepository
 from taskhub.modules.labels.schemas import LabelCreate, LabelUpdate
-
-
-class LabelNotFoundError(Exception):
-    """Raised when a label does not exist within the requested project."""
-
-
-class ProjectNotFoundError(Exception):
-    """Raised when a label operation targets an unknown project."""
 
 
 class LabelService:
@@ -25,7 +18,7 @@ class LabelService:
     async def create(self, project_id: UUID, data: LabelCreate) -> Label:
         """Create a label in a project."""
         if not await self._repository.project_exists(project_id):
-            raise ProjectNotFoundError
+            raise ResourceNotFoundError
         label = Label(
             id=uuid4(),
             project_id=project_id,
@@ -55,5 +48,5 @@ class LabelService:
     async def _get_in_project(self, project_id: UUID, label_id: UUID) -> Label:
         label = await self._repository.get_by_id(label_id)
         if label is None or label.project_id != project_id:
-            raise LabelNotFoundError
+            raise ResourceNotFoundError
         return label

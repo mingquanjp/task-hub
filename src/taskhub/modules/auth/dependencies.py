@@ -2,13 +2,14 @@
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from taskhub.api.dependencies import DbSessionDep
 from taskhub.core.config import SecuritySettings, get_security_settings
+from taskhub.core.exceptions import InactiveUserError, InvalidTokenError, PermissionDeniedError
 from taskhub.core.passwords import PasswordHasher
-from taskhub.modules.auth.entities import User
+from taskhub.modules.auth.entities import User, UserRole
 from taskhub.modules.auth.repository import (
     RefreshTokenRepository,
     SQLAlchemyRefreshTokenRepository,
@@ -70,28 +71,30 @@ async def get_current_user(
     tokens: TokenServiceDep,
     users: UserRepositoryDep,
 ) -> User:
-    unauthorized = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     if not credentials or credentials.scheme.lower() != "bearer":
-        raise unauthorized
+        raise InvalidTokenError
 
     try:
         user_id = tokens.decode_access(credentials.credentials)
     except InvalidTokenErrorDomain as exc:
-        raise unauthorized from exc
+        raise InvalidTokenError from exc
 
     user = await users.get_by_id(user_id)
     if user is None:
-        raise unauthorized
+        raise InvalidTokenError
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user",
-        )
+        raise InactiveUserError
     return user
 
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+def require_admin(user: CurrentUserDep) -> User:
+    """Require the current user to have the ADMIN system role."""
+    if user.role != UserRole.ADMIN:
+        raise PermissionDeniedError
+    return user
+
+
+AdminUserDep = Annotated[User, Depends(require_admin)]
