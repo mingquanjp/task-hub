@@ -13,11 +13,14 @@ from taskhub.core.exceptions import (
     IncorrectCurrentPasswordError,
     InvalidCredentialsError,
     InvalidTokenError,
+    InvalidWorkspaceRoleError,
     PermissionDeniedError,
     ResourceNotFoundError,
     TokenRevokedError,
     UserAlreadyExistsError,
     UserNotFoundError,
+    WorkspaceMemberAlreadyExistsError,
+    WorkspaceOwnerRemovalError,
 )
 
 logger = logging.getLogger(__name__)
@@ -75,6 +78,18 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
         status_code = 404
         code = "resource_not_found"
         message = "Resource not found"
+    elif isinstance(exc, WorkspaceMemberAlreadyExistsError):
+        status_code = 409
+        code = "workspace_member_already_exists"
+        message = "User is already a member"
+    elif isinstance(exc, WorkspaceOwnerRemovalError):
+        status_code = 403
+        code = "workspace_owner_removal"
+        message = "Cannot remove the workspace owner"
+    elif isinstance(exc, InvalidWorkspaceRoleError):
+        status_code = 422
+        code = "invalid_workspace_role"
+        message = "Invalid workspace role"
 
     response = ErrorResponse(code=code, message=message, request_id=request_id)
     if headers is None:
