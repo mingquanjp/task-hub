@@ -116,3 +116,46 @@ async def test_workspace_repositories(database_url: str, setup_users: tuple[UUID
         await session.commit()
 
     await database.dispose()
+
+
+@pytest.mark.asyncio
+async def test_workspace_cascade_deletes(database_url: str, setup_users: tuple[UUID, UUID]) -> None:
+    owner_id, member_id = setup_users
+    database = Database(database_url)
+    workspace_id = uuid4()
+
+    # Create workspace and member
+    import datetime
+
+    now = datetime.datetime.now(datetime.UTC)
+    async with database.session_factory() as session:
+        workspace_repo = SQLAlchemyWorkspaceRepository(session)
+        member_repo = SQLAlchemyWorkspaceMemberRepository(session)
+
+        ws = Workspace(id=workspace_id, name="Cascade Test", owner_id=owner_id, created_at=now)
+        await workspace_repo.create(ws)
+
+        mem = WorkspaceMember(
+            workspace_id=workspace_id, user_id=member_id, role=WorkspaceRole.VIEWER, created_at=now
+        )
+        await member_repo.create(mem)
+        await session.commit()
+
+    # Delete workspace and assert member is cascaded
+    async with database.session_factory() as session:
+        # We don't have a delete workspace in repo yet,
+        # so we execute raw SQL to test DB level cascade
+        from sqlalchemy import delete
+
+        from taskhub.infrastructure.database.models.workspace import WorkspaceModel
+
+        stmt = delete(WorkspaceModel).where(WorkspaceModel.id == workspace_id)
+        await session.execute(stmt)
+        await session.commit()
+
+    async with database.session_factory() as session:
+        member_repo = SQLAlchemyWorkspaceMemberRepository(session)
+        fetched_mem = await member_repo.get(workspace_id, member_id)
+        assert fetched_mem is None, "Membership should be cascaded when workspace is deleted"
+
+    await database.dispose()

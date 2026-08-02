@@ -200,3 +200,35 @@ def test_openapi_schema(api_client: TestClient) -> None:
     workspace_post = paths["/api/v1/workspaces"]["post"]
     assert "security" in workspace_post
     assert any("HTTPBearer" in sec for sec in workspace_post["security"])
+
+
+def test_workspace_boundary_access(api_client: TestClient) -> None:
+    # Workspace A
+    owner_a_token = get_token(api_client, "ownerA@test.com")
+    resp_a = api_client.post(
+        "/api/v1/workspaces",
+        json={"name": "Workspace A"},
+        headers={"Authorization": f"Bearer {owner_a_token}"},
+    )
+    workspace_a_id = resp_a.json()["id"]
+
+    # Workspace B
+    owner_b_token = get_token(api_client, "ownerB@test.com")
+    resp_b = api_client.post(
+        "/api/v1/workspaces",
+        json={"name": "Workspace B"},
+        headers={"Authorization": f"Bearer {owner_b_token}"},
+    )
+    workspace_b_id = resp_b.json()["id"]
+
+    # Owner A trying to access Workspace B should fail
+    resp = api_client.get(
+        f"/api/v1/workspaces/{workspace_b_id}", headers={"Authorization": f"Bearer {owner_a_token}"}
+    )
+    assert resp.status_code == 403
+
+    # Owner B trying to access Workspace A should fail
+    resp = api_client.get(
+        f"/api/v1/workspaces/{workspace_a_id}", headers={"Authorization": f"Bearer {owner_b_token}"}
+    )
+    assert resp.status_code == 403
