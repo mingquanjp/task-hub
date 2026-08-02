@@ -70,3 +70,13 @@ def test_require_admin_fails_for_member(active_user: User) -> None:
     member = replace(active_user, role=UserRole.MEMBER)
     with pytest.raises(PermissionDeniedError):
         require_admin(member)
+
+
+def test_workspace_placeholders_fail_closed() -> None:
+    from taskhub.modules.auth.authorization import require_workspace_member, require_workspace_role
+
+    with pytest.raises(NotImplementedError):
+        require_workspace_member()
+
+    with pytest.raises(NotImplementedError):
+        require_workspace_role(ResourceAction.VIEW)

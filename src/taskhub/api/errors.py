@@ -80,7 +80,7 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
     if headers is None:
         headers = {}
     headers["X-Request-ID"] = request_id
-    
+
     return JSONResponse(
         status_code=status_code,
         content=response.model_dump(),

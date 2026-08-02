@@ -57,6 +57,7 @@ def test_register_login_refresh_and_logout_flow(auth_client: TestClient) -> None
     logout = auth_client.post(
         "/api/v1/auth/logout",
         json={"refresh_token": rotated["refresh_token"]},
+        headers={"Authorization": f"Bearer {rotated['access_token']}"},
     )
     assert logout.status_code == 204
     assert logout.content == b""
@@ -71,7 +72,7 @@ def test_register_login_refresh_and_logout_flow(auth_client: TestClient) -> None
         "/api/v1/auth/logout",
         json={"refresh_token": rotated["refresh_token"]},
     )
-    assert invalid_logout.status_code == 204
+    assert invalid_logout.status_code == 401
 
 
 @pytest.mark.parametrize(

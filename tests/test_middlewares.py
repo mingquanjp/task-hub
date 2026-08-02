@@ -68,8 +68,8 @@ async def test_internal_error_route_returns_500_and_hides_details(app: FastAPI) 
     import httpx
 
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as async_client:
-        response = await async_client.get("/internal-error", headers={"X-Request-ID": "test-internal"})
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/internal-error", headers={"X-Request-ID": "test-internal"})
 
     assert response.status_code == 500
     assert response.headers.get("X-Request-ID") == "test-internal"

@@ -19,7 +19,7 @@ from taskhub.modules.auth.repository import (
 from taskhub.modules.auth.service import AuthService
 from taskhub.modules.auth.tokens import InvalidTokenErrorDomain, TokenService
 
-bearer_scheme = HTTPBearer(auto_error=False)
+bearer_scheme = HTTPBearer(auto_error=False, bearerFormat="JWT")
 
 
 def get_security_configuration(request: Request) -> SecuritySettings:

@@ -1,7 +1,8 @@
 """HTTP endpoints for user profile management."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, status
 
+from taskhub.api.schemas import ErrorResponse
 from taskhub.modules.auth.dependencies import CurrentUserDep
 from taskhub.modules.auth.schemas import UserResponse
 from taskhub.modules.users.dependencies import UserServiceDep
@@ -14,6 +15,13 @@ router = APIRouter(prefix="/users", tags=["users"])
     "/me",
     response_model=UserResponse,
     summary="Get current user profile",
+    description="Retrieve the profile of the currently authenticated user.",
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Not authenticated",
+            "model": ErrorResponse,
+        },
+    },
 )
 async def get_current_user_profile(user: CurrentUserDep) -> UserResponse:
     """Return the currently authenticated user's profile information."""
@@ -24,9 +32,20 @@ async def get_current_user_profile(user: CurrentUserDep) -> UserResponse:
     "/me",
     response_model=UserResponse,
     summary="Update current user profile",
+    description="Update the authenticated user's profile details.",
     responses={
-        409: {"description": "Email already in use"},
-        422: {"description": "Validation error (e.g., empty body)"},
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Not authenticated",
+            "model": ErrorResponse,
+        },
+        status.HTTP_409_CONFLICT: {
+            "description": "Email already in use",
+            "model": ErrorResponse,
+        },
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "description": "Validation error (e.g., empty body)",
+            "model": ErrorResponse,
+        },
     },
 )
 async def update_current_user_profile(
@@ -48,8 +67,23 @@ async def update_current_user_profile(
     "/me/change-password",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Change user password",
+    description=(
+        "Change the password for the currently authenticated user "
+        "and revoke all their refresh tokens."
+    ),
     responses={
-        400: {"description": "Incorrect current password"},
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Incorrect current password",
+            "model": ErrorResponse,
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Not authenticated",
+            "model": ErrorResponse,
+        },
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "description": "Validation error",
+            "model": ErrorResponse,
+        },
     },
 )
 async def change_current_user_password(

@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from anyio import to_thread
 
@@ -103,7 +103,7 @@ class AuthService:
             raise InvalidTokenError
         return await self._issue_credentials(user)
 
-    async def logout(self, raw_refresh_token: str) -> None:
+    async def logout(self, user_id: UUID, raw_refresh_token: str) -> None:
         try:
             claims = self._token_service.decode_refresh(raw_refresh_token)
         except InvalidTokenErrorDomain as exc:
@@ -112,6 +112,8 @@ class AuthService:
             self._token_service.hash_refresh_token(raw_refresh_token)
         )
         if stored is None or stored.id != claims.token_id or stored.user_id != claims.user_id:
+            raise InvalidTokenError
+        if claims.user_id != user_id:
             raise InvalidTokenError
         await self._refresh_tokens.revoke(stored.id, datetime.now(UTC))
 
