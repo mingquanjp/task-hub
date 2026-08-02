@@ -83,8 +83,8 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
         code = "workspace_member_already_exists"
         message = "User is already a member"
     elif isinstance(exc, WorkspaceOwnerRemovalError):
-        status_code = 403
-        code = "workspace_owner_removal"
+        status_code = 409
+        code = "workspace_owner_removal_forbidden"
         message = "Cannot remove the workspace owner"
     elif isinstance(exc, InvalidWorkspaceRoleError):
         status_code = 422
