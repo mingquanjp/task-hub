@@ -74,8 +74,8 @@ async def require_project_member(
     if not member:
         # We raise ResourceNotFoundError for non-members as per typical workspace policy
         # to prevent exposing the existence of the resource.
-        # But wait, require_workspace_member raises PermissionDeniedError according to prompt 4.5.
-        # The prompt says: "User không thuộc workspace: 403 hoặc 404 theo policy đã dùng trong Workspace."
+        # The prompt says: "User không thuộc workspace: 403 hoặc 404 theo policy đã
+        # dùng trong Workspace."
         # Let's import PermissionDeniedError.
         from taskhub.core.exceptions import PermissionDeniedError
         raise PermissionDeniedError("User is not a member of this workspace")
@@ -89,7 +89,10 @@ ProjectMemberDep = Annotated[tuple[User, Project], Depends(require_project_membe
 def require_project_role(
     *allowed_roles: WorkspaceRole,
 ) -> Callable[..., Awaitable[tuple[User, Project]]]:
-    """Create a dependency that requires the user to have one of the specified roles in the project's workspace."""
+    """
+    Create a dependency that requires the user to have one of the specified
+    roles in the project's workspace.
+    """
 
     async def _require_role(
         user: CurrentUserDep,
