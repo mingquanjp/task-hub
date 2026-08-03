@@ -51,3 +51,15 @@ class PermissionDeniedError(AuthorizationError):
 
 class ResourceNotFoundError(DomainError):
     """Base exception for when a requested domain resource does not exist."""
+
+
+class WorkspaceMemberAlreadyExistsError(ConflictError):
+    """Raised when attempting to add a user to a workspace they are already a member of."""
+
+
+class WorkspaceOwnerRemovalError(ConflictError):
+    """Raised when attempting to remove the owner of a workspace."""
+
+
+class InvalidWorkspaceRoleError(DomainError):
+    """Raised when an invalid role is used for a workspace operation."""
