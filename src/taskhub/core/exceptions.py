@@ -75,3 +75,22 @@ class ProjectAlreadyArchivedError(ConflictError):
 
 class InvalidProjectStateError(ConflictError):
     """Raised when performing an operation that is invalid for the project's current state."""
+
+class TaskNotFoundError(ResourceNotFoundError):
+    """Raised when a task is not found."""
+
+
+class TaskAssigneeNotFoundError(ResourceNotFoundError):
+    """Raised when a task assignee is not found."""
+
+
+class TaskAssigneeNotWorkspaceMemberError(ConflictError):
+    """Raised when assigning a task to a user who is not a member of the workspace."""
+
+
+class InvalidTaskStateError(ConflictError):
+    """Raised when an invalid task state transition is attempted or project is archived."""
+
+
+class TaskProjectNotFoundError(ResourceNotFoundError):
+    """Raised when the project for a task is not found."""

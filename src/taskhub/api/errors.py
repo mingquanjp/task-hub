@@ -13,12 +13,17 @@ from taskhub.core.exceptions import (
     IncorrectCurrentPasswordError,
     InvalidCredentialsError,
     InvalidProjectStateError,
+    InvalidTaskStateError,
     InvalidTokenError,
     InvalidWorkspaceRoleError,
     PermissionDeniedError,
     ProjectAlreadyArchivedError,
     ProjectNotFoundError,
     ResourceNotFoundError,
+    TaskAssigneeNotFoundError,
+    TaskAssigneeNotWorkspaceMemberError,
+    TaskNotFoundError,
+    TaskProjectNotFoundError,
     TokenRevokedError,
     UserAlreadyExistsError,
     UserNotFoundError,
@@ -101,10 +106,26 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
         status_code = 409
         code = "project_already_archived"
         message = "Project is already archived"
-    elif isinstance(exc, InvalidProjectStateError):
+    elif isinstance(exc, (InvalidProjectStateError, InvalidTaskStateError)):
         status_code = 409
-        code = "invalid_project_state"
-        message = "Invalid project state for operation"
+        code = "invalid_state"
+        message = "Invalid state for operation"
+    elif isinstance(exc, TaskNotFoundError):
+        status_code = 404
+        code = "task_not_found"
+        message = "Task not found"
+    elif isinstance(exc, TaskAssigneeNotFoundError):
+        status_code = 404
+        code = "task_assignee_not_found"
+        message = "Task assignee not found"
+    elif isinstance(exc, TaskAssigneeNotWorkspaceMemberError):
+        status_code = 403
+        code = "task_assignee_not_workspace_member"
+        message = "Assignee is not a member of the workspace"
+    elif isinstance(exc, TaskProjectNotFoundError):
+        status_code = 404
+        code = "task_project_not_found"
+        message = "Project for the task not found"
 
     response = ErrorResponse(code=code, message=message, request_id=request_id)
     if headers is None:
