@@ -11,7 +11,7 @@ TaskHub is a FastAPI task-management API. It currently provides a database-backe
 - PostgreSQL persistence with SQLAlchemy 2.x async, psycopg, and Alembic.
 - Authentication: user persistence, Argon2 password hashing, JWT access/refresh tokens, and register/login/refresh/logout flows.
 
-User profile, RBAC, Project API, workspaces, tasks, Redis, and Docker are intentionally outside the current scope. Authentication register/login/refresh/logout is now available.
+User profile, RBAC, Project API, workspaces, tasks, Redis, and Docker are intentionally outside the current scope. Authentication register/login/refresh/logout and User Profile APIs are now available.
 
 There is not yet a Project API, but the database validates the parent: creating a label for an unknown `project_id` returns `404`.
 
@@ -67,6 +67,9 @@ All label endpoints are tagged `labels` in Swagger. `project_id` and `label_id` 
 | `POST` | `/api/v1/auth/login` | 200 | Issue access and refresh tokens. |
 | `POST` | `/api/v1/auth/refresh` | 200 | Rotate a refresh token. |
 | `POST` | `/api/v1/auth/logout` | 204 | Revoke a refresh token. |
+| `GET` | `/api/v1/users/me` | 200 | Get current user profile. |
+| `PATCH` | `/api/v1/users/me` | 200 | Partially update current user profile. |
+| `POST` | `/api/v1/users/me/change-password` | 204 | Change password and revoke refresh tokens. |
 | `POST` | `/api/v1/projects/{project_id}/labels` | 201 | Create a label. |
 | `GET` | `/api/v1/projects/{project_id}/labels` | 200 | List labels for a project. |
 | `GET` | `/api/v1/projects/{project_id}/labels/{label_id}` | 200 | Get one label. |
@@ -118,6 +121,24 @@ For `PATCH`, send at least one concrete field. Omitted fields remain unchanged; 
 4. Call list and get with the same `project_id` and `id`.
 5. Patch the label using the example partial payload.
 6. Delete it, then call get again to confirm the `404` response.
+
+### Swagger auth and token flow
+
+TaskHub uses JWT access and refresh tokens. Follow these steps to test protected endpoints in Swagger:
+
+1. **Register**: Expand `POST /api/v1/auth/register` and submit a new user payload (email, full_name, password).
+2. **Login**: Expand `POST /api/v1/auth/login` and submit the credentials. Copy the `access_token` and `refresh_token` from the response.
+3. **Authorize**: Scroll to the top of `/docs`, click the **Authorize** button. Paste ONLY the `access_token` into the value field and click Authorize.
+4. **Access Protected Routes**: Expand `GET /api/v1/users/me` and click Try it out. It will automatically use your Bearer token.
+5. **Update Profile**: Use `PATCH /api/v1/users/me` to update your details.
+6. **Refresh Token**: Expand `POST /api/v1/auth/refresh`. Do NOT put the refresh token in the Authorize button. Put the `refresh_token` in the request body. You will receive a new access/refresh pair. The old refresh token is now revoked.
+7. **Change Password**: Use `POST /api/v1/users/me/change-password`. Note: changing password revokes ALL active refresh tokens for the user.
+8. **Login Again**: Use `POST /api/v1/auth/login` with your new password to get a new pair of tokens.
+9. **Authorize Again**: Update the **Authorize** button with the new `access_token`.
+10. **Logout**: Use `POST /api/v1/auth/logout`. Submit the NEW `refresh_token` in the body. Ensure your new `access_token` is still in the Authorize button.
+11. **Verify Revocation**: Try to use `POST /api/v1/auth/refresh` with the OLD `refresh_token` and confirm it returns a `401 Unauthorized`.
+
+*Note: The `access_token` is verified against the database on each request to ensure the user is still active. There is no access-token blacklist; tokens expire naturally after their configured lifespan (default 15 mins).*
 
 ## Architecture
 

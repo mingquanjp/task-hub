@@ -7,15 +7,15 @@ import pytest
 from pydantic import SecretStr
 
 from taskhub.core.config import SecuritySettings
-from taskhub.core.passwords import PasswordHasher
-from taskhub.modules.auth.entities import User
-from taskhub.modules.auth.service import (
-    AuthService,
+from taskhub.core.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
-    InvalidRefreshTokenError,
+    TokenRevokedError,
     UserAlreadyExistsError,
 )
+from taskhub.core.passwords import PasswordHasher
+from taskhub.modules.auth.entities import User
+from taskhub.modules.auth.service import AuthService
 from taskhub.modules.auth.tokens import TokenService
 
 
@@ -98,11 +98,11 @@ async def test_login_refresh_rotates_and_logout_revokes_token() -> None:
     assert rotated.refresh_token != result.refresh_token
     assert len(tokens.tokens) == 2
 
-    with pytest.raises(InvalidRefreshTokenError):
+    with pytest.raises(TokenRevokedError):
         await service.refresh(result.refresh_token)
 
-    await service.logout(rotated.refresh_token)
-    with pytest.raises(InvalidRefreshTokenError):
+    await service.logout(user.id, rotated.refresh_token)
+    with pytest.raises(TokenRevokedError):
         await service.refresh(rotated.refresh_token)
 
 
@@ -114,3 +114,18 @@ async def test_inactive_user_cannot_login() -> None:
 
     with pytest.raises(InactiveUserError):
         await service.login(user.email, "password123")
+
+
+@pytest.mark.asyncio
+async def test_logout_rejects_token_from_other_user() -> None:
+    from taskhub.core.exceptions import InvalidTokenError
+
+    service, _, _ = make_service()
+    user1 = await service.register("user1@example.com", "User 1", "password123")
+    user2 = await service.register("user2@example.com", "User 2", "password123")
+
+    result1 = await service.login(user1.email, "password123")
+
+    # User 2 tries to revoke User 1's refresh token
+    with pytest.raises(InvalidTokenError):
+        await service.logout(user2.id, result1.refresh_token)
