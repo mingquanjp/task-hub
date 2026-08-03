@@ -5,7 +5,12 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from taskhub.infrastructure.database.models import LabelModel, ProjectModel
+from taskhub.infrastructure.database.models import (
+    LabelModel,
+    ProjectModel,
+    UserModel,
+    WorkspaceModel,
+)
 from taskhub.infrastructure.database.session import Database
 from taskhub.infrastructure.repositories.base import BaseRepository
 from taskhub.modules.labels.entities import Label
@@ -14,8 +19,12 @@ from taskhub.modules.labels.sqlalchemy_repository import SQLAlchemyLabelReposito
 
 async def create_project(database: Database, project_id: UUID) -> None:
     """Persist a minimal ProjectModel parent for a label test."""
+    workspace_id = uuid4()
+    owner_id = uuid4()
     async with database.session_factory() as session:
-        session.add(ProjectModel(id=project_id))
+        session.add(UserModel(id=owner_id, email=f"{owner_id}@test.com", hashed_password="hash", full_name="Test"))
+        session.add(WorkspaceModel(id=workspace_id, name="Test WS", owner_id=owner_id))
+        session.add(ProjectModel(id=project_id, workspace_id=workspace_id, name="Test Project", status="ACTIVE"))
         await session.commit()
 
 

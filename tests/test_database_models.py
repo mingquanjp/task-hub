@@ -42,7 +42,7 @@ def test_project_and_label_models_define_the_expected_schema() -> None:
     projects = Base.metadata.tables["projects"]
     labels = Base.metadata.tables["labels"]
 
-    assert {column.name for column in projects.columns} == {"id", "created_at"}
+    assert {column.name for column in projects.columns} == {"id", "workspace_id", "name", "description", "status", "created_at"}
     assert {column.name for column in labels.columns} == {
         "id",
         "project_id",
@@ -60,7 +60,7 @@ def test_project_and_label_models_define_the_expected_schema() -> None:
 
 
 def test_project_and_label_models_have_a_bidirectional_relationship() -> None:
-    project = ProjectModel(id=uuid4())
+    project = ProjectModel(id=uuid4(), workspace_id=uuid4(), name="Test", status="ACTIVE")
     label = LabelModel(id=uuid4(), project_id=project.id, name="Backend", color="#1A73E8")
 
     project.labels.append(label)
