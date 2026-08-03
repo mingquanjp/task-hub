@@ -36,6 +36,7 @@ def test_initial_migration_creates_and_removes_schema(database_url: str) -> None
                 "users",
                 "workspaces",
                 "workspace_members",
+                "tasks",
             } == set(inspector.get_table_names())
             assert {index["name"] for index in inspector.get_indexes("labels")} == {
                 "ix_labels_project_id"
