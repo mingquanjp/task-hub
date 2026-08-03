@@ -12,9 +12,12 @@ from taskhub.core.exceptions import (
     InactiveUserError,
     IncorrectCurrentPasswordError,
     InvalidCredentialsError,
+    InvalidProjectStateError,
     InvalidTokenError,
     InvalidWorkspaceRoleError,
     PermissionDeniedError,
+    ProjectAlreadyArchivedError,
+    ProjectNotFoundError,
     ResourceNotFoundError,
     TokenRevokedError,
     UserAlreadyExistsError,
@@ -90,6 +93,18 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
         status_code = 422
         code = "invalid_workspace_role"
         message = "Invalid workspace role"
+    elif isinstance(exc, ProjectNotFoundError):
+        status_code = 404
+        code = "project_not_found"
+        message = "Project not found"
+    elif isinstance(exc, ProjectAlreadyArchivedError):
+        status_code = 409
+        code = "project_already_archived"
+        message = "Project is already archived"
+    elif isinstance(exc, InvalidProjectStateError):
+        status_code = 409
+        code = "invalid_project_state"
+        message = "Invalid project state for operation"
 
     response = ErrorResponse(code=code, message=message, request_id=request_id)
     if headers is None:

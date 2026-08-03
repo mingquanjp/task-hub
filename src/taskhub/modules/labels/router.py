@@ -6,6 +6,7 @@ from fastapi import APIRouter, Response, status
 
 from taskhub.modules.labels.dependencies import LabelServiceDep
 from taskhub.modules.labels.schemas import LabelCreate, LabelResponse, LabelUpdate
+from taskhub.modules.projects.dependencies import OwnerOrEditorProjectUserDep, ProjectMemberDep
 
 router = APIRouter(prefix="/projects/{project_id}/labels", tags=["labels"])
 
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/projects/{project_id}/labels", tags=["labels"])
     responses={status.HTTP_404_NOT_FOUND: {"description": "Project not found"}},
 )
 async def create_label(
+    user_project: OwnerOrEditorProjectUserDep,
     project_id: UUID,
     data: LabelCreate,
     service: LabelServiceDep,
@@ -26,7 +28,11 @@ async def create_label(
 
 
 @router.get("", response_model=list[LabelResponse])
-async def list_labels(project_id: UUID, service: LabelServiceDep) -> list[LabelResponse]:
+async def list_labels(
+    user_project: ProjectMemberDep,
+    project_id: UUID, 
+    service: LabelServiceDep
+) -> list[LabelResponse]:
     """List labels in a project."""
     return [
         LabelResponse.model_validate(label) for label in await service.list_by_project(project_id)
@@ -39,6 +45,7 @@ async def list_labels(project_id: UUID, service: LabelServiceDep) -> list[LabelR
     responses={status.HTTP_404_NOT_FOUND: {"description": "Label not found"}},
 )
 async def get_label(
+    user_project: ProjectMemberDep,
     project_id: UUID,
     label_id: UUID,
     service: LabelServiceDep,
@@ -53,6 +60,7 @@ async def get_label(
     responses={status.HTTP_404_NOT_FOUND: {"description": "Label not found"}},
 )
 async def update_label(
+    user_project: OwnerOrEditorProjectUserDep,
     project_id: UUID,
     label_id: UUID,
     data: LabelUpdate,
@@ -67,7 +75,12 @@ async def update_label(
     status_code=status.HTTP_204_NO_CONTENT,
     responses={status.HTTP_404_NOT_FOUND: {"description": "Label not found"}},
 )
-async def delete_label(project_id: UUID, label_id: UUID, service: LabelServiceDep) -> Response:
+async def delete_label(
+    user_project: OwnerOrEditorProjectUserDep,
+    project_id: UUID, 
+    label_id: UUID, 
+    service: LabelServiceDep
+) -> Response:
     """Delete a label in a project."""
     await service.delete(project_id, label_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
