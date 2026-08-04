@@ -1,10 +1,10 @@
 """Pydantic schemas for the tasks module."""
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from taskhub.modules.tasks.entities import TaskPriority, TaskStatus
 
@@ -37,6 +37,13 @@ class TaskUpdate(BaseModel):
     status: TaskStatus | None = Field(None, description="Task status")
     priority: TaskPriority | None = Field(None, description="Task priority")
     due_date: datetime | None = Field(None, description="Optional due date")
+
+    @model_validator(mode="after")
+    def validate_partial_update(self) -> Self:
+        """Require at least one field for an update."""
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided for an update")
+        return self
 
 
 class TaskResponse(BaseModel):

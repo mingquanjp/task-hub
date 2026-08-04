@@ -128,11 +128,6 @@ async def update_task(
     service: TaskServiceDep,
 ) -> TaskResponse:
     """Update a task partially."""
-    if not data.model_fields_set:
-        from fastapi import HTTPException
-
-        raise HTTPException(status_code=422, detail="Empty request body")
-
     task = await service.update(
         task_id=task_id,
         title=data.title,
