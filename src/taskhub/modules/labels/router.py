@@ -29,9 +29,7 @@ async def create_label(
 
 @router.get("", response_model=list[LabelResponse])
 async def list_labels(
-    user_project: ProjectMemberDep,
-    project_id: UUID, 
-    service: LabelServiceDep
+    user_project: ProjectMemberDep, project_id: UUID, service: LabelServiceDep
 ) -> list[LabelResponse]:
     """List labels in a project."""
     return [
@@ -77,9 +75,9 @@ async def update_label(
 )
 async def delete_label(
     user_project: OwnerOrEditorProjectUserDep,
-    project_id: UUID, 
-    label_id: UUID, 
-    service: LabelServiceDep
+    project_id: UUID,
+    label_id: UUID,
+    service: LabelServiceDep,
 ) -> Response:
     """Delete a label in a project."""
     await service.delete(project_id, label_id)

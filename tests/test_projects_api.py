@@ -29,13 +29,13 @@ def get_token(client: TestClient, email: str = "owner@test.com") -> str:
         "/api/v1/auth/login",
         json={"email": email, "password": "password123"},
     )
-    return resp.json()["access_token"]
+    return resp.json()["access_token"]  # type: ignore
 
 
 def create_workspace(client: TestClient, token: str) -> str:
     headers = {"Authorization": f"Bearer {token}"}
     ws_resp = client.post("/api/v1/workspaces", json={"name": "WS"}, headers=headers)
-    return ws_resp.json()["id"]
+    return ws_resp.json()["id"]  # type: ignore
 
 
 def test_project_crud(client: TestClient) -> None:
@@ -92,17 +92,21 @@ def test_project_crud(client: TestClient) -> None:
 def test_project_authorization(client: TestClient) -> None:
     owner_token = get_token(client, "owner@test.com")
     viewer_token = get_token(client, "viewer@test.com")
-    
+
     owner_headers = {"Authorization": f"Bearer {owner_token}"}
     viewer_headers = {"Authorization": f"Bearer {viewer_token}"}
-    
+
     ws_id = create_workspace(client, owner_token)
-    
+
     viewer_id = client.get("/api/v1/users/me", headers=viewer_headers).json()["id"]
-    
+
     # Add viewer to workspace
-    client.post(f"/api/v1/workspaces/{ws_id}/members", json={"user_id": viewer_id, "role": "VIEWER"}, headers=owner_headers)
-    
+    client.post(
+        f"/api/v1/workspaces/{ws_id}/members",
+        json={"user_id": viewer_id, "role": "VIEWER"},
+        headers=owner_headers,
+    )
+
     # Owner can create project
     create_resp = client.post(
         f"/api/v1/workspaces/{ws_id}/projects",
@@ -112,30 +116,42 @@ def test_project_authorization(client: TestClient) -> None:
     project_id = create_resp.json()["id"]
 
     # Viewer cannot create project
-    assert client.post(
-        f"/api/v1/workspaces/{ws_id}/projects",
-        json={"name": "Viewer Project"},
-        headers=viewer_headers,
-    ).status_code == 403
+    assert (
+        client.post(
+            f"/api/v1/workspaces/{ws_id}/projects",
+            json={"name": "Viewer Project"},
+            headers=viewer_headers,
+        ).status_code
+        == 403
+    )
 
     # Viewer can get project
     assert client.get(f"/api/v1/projects/{project_id}", headers=viewer_headers).status_code == 200
 
     # Viewer cannot update project
-    assert client.patch(
-        f"/api/v1/projects/{project_id}",
-        json={"name": "Viewer Update"},
-        headers=viewer_headers,
-    ).status_code == 403
+    assert (
+        client.patch(
+            f"/api/v1/projects/{project_id}",
+            json={"name": "Viewer Update"},
+            headers=viewer_headers,
+        ).status_code
+        == 403
+    )
 
     # Viewer cannot archive project
-    assert client.post(
-        f"/api/v1/projects/{project_id}/archive",
-        headers=viewer_headers,
-    ).status_code == 403
+    assert (
+        client.post(
+            f"/api/v1/projects/{project_id}/archive",
+            headers=viewer_headers,
+        ).status_code
+        == 403
+    )
 
     # Viewer cannot delete project
-    assert client.delete(
-        f"/api/v1/projects/{project_id}",
-        headers=viewer_headers,
-    ).status_code == 403
+    assert (
+        client.delete(
+            f"/api/v1/projects/{project_id}",
+            headers=viewer_headers,
+        ).status_code
+        == 403
+    )

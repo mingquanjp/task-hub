@@ -47,12 +47,12 @@ async def test_get_project_not_found(service: ProjectService, mock_repo: AsyncMo
 
 @pytest.mark.asyncio
 async def test_update_project_partial(service: ProjectService, mock_repo: AsyncMock) -> None:
-    project = Project(uuid4(), uuid4(), "Old", "Old Desc", ProjectStatus.ACTIVE, None) # type: ignore
+    project = Project(uuid4(), uuid4(), "Old", "Old Desc", ProjectStatus.ACTIVE, None)  # type: ignore
     mock_repo.get_by_id.return_value = project
     mock_repo.update.return_value = project
 
     updated = await service.update(project.id, name="New")
-    
+
     assert updated.name == "New"
     assert updated.description == "Old Desc"
     mock_repo.update.assert_called_once()
@@ -60,7 +60,7 @@ async def test_update_project_partial(service: ProjectService, mock_repo: AsyncM
 
 @pytest.mark.asyncio
 async def test_archive_project(service: ProjectService, mock_repo: AsyncMock) -> None:
-    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None) # type: ignore
+    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None)  # type: ignore
     mock_repo.get_by_id.return_value = project
     mock_repo.update.return_value = project
 
@@ -69,8 +69,10 @@ async def test_archive_project(service: ProjectService, mock_repo: AsyncMock) ->
 
 
 @pytest.mark.asyncio
-async def test_archive_already_archived_project(service: ProjectService, mock_repo: AsyncMock) -> None:
-    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ARCHIVED, None) # type: ignore
+async def test_archive_already_archived_project(
+    service: ProjectService, mock_repo: AsyncMock
+) -> None:
+    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ARCHIVED, None)  # type: ignore
     mock_repo.get_by_id.return_value = project
 
     with pytest.raises(ProjectAlreadyArchivedError):

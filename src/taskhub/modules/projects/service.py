@@ -73,10 +73,11 @@ class ProjectService:
         """Delete a project."""
         project = await self.get(project_id)
         if project.status != ProjectStatus.ARCHIVED:
-            # We can allow deletion of active projects, but if policy says so we can restrict it.
-            # But the prompt says "Nếu chưa có yêu cầu khác, chọn policy đơn giản: PATCH/DELETE project archived phải có behavior rõ ràng".
-            # Let's just delete it, or maybe only allow deleting archived projects?
-            # Actually, standard policy is just delete it. We'll leave it as direct delete for now.
+            # Tuỳ theo yêu cầu khác, chọn policy đơn giản: PATCH/DELETE
+            # project archived phải có behavior rõ ràng.
+            # Do we allow deleting archived projects?
+            # A simple policy is to allow it, so we don't enforce active state to delete it.
+            # We'll leave it as direct delete for now.
             pass
 
         deleted = await self.project_repo.delete(project_id)

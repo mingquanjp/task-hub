@@ -116,20 +116,20 @@ async def test_require_workspace_role_owner(
     dep = require_workspace_role(WorkspaceRole.OWNER)
 
     owner = make_user(fake_repo.owner_id)
-    user = await dep(fake_repo.workspace_id, owner, fake_repo)  # type: ignore
+    user = await dep(fake_repo.workspace_id, owner, fake_repo)
     assert user == owner
 
     # Admin bypasses
     admin = make_user(uuid4(), UserRole.ADMIN)
-    user = await dep(fake_repo.workspace_id, admin, fake_repo)  # type: ignore
+    user = await dep(fake_repo.workspace_id, admin, fake_repo)
     assert user == admin
 
     # Editor denied
     editor = make_user(fake_repo.editor_id)
     with pytest.raises(PermissionDeniedError):
-        await dep(fake_repo.workspace_id, editor, fake_repo)  # type: ignore
+        await dep(fake_repo.workspace_id, editor, fake_repo)
 
     # Non member denied
     non_member = make_user(uuid4())
     with pytest.raises(PermissionDeniedError):
-        await dep(fake_repo.workspace_id, non_member, fake_repo)  # type: ignore
+        await dep(fake_repo.workspace_id, non_member, fake_repo)

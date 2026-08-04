@@ -29,7 +29,7 @@ def get_token(client: TestClient, email: str = "owner@test.com") -> str:
         "/api/v1/auth/login",
         json={"email": email, "password": "password123"},
     )
-    return resp.json()["access_token"]
+    return resp.json()["access_token"]  # type: ignore
 
 
 def test_workspace_full_flow(api_client: TestClient) -> None:

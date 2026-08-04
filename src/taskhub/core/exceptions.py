@@ -75,3 +75,43 @@ class ProjectAlreadyArchivedError(ConflictError):
 
 class InvalidProjectStateError(ConflictError):
     """Raised when performing an operation that is invalid for the project's current state."""
+
+
+class TaskNotFoundError(ResourceNotFoundError):
+    """Raised when a task is not found."""
+
+
+class TaskAssigneeNotFoundError(ResourceNotFoundError):
+    """Raised when a task assignee is not found."""
+
+
+class TaskAssigneeNotWorkspaceMemberError(ConflictError):
+    """Raised when assigning a task to a user who is not a member of the workspace."""
+
+
+class InvalidTaskStateError(ConflictError):
+    """Raised when an invalid task state transition is attempted or project is archived."""
+
+
+class TaskProjectNotFoundError(ResourceNotFoundError):
+    """Raised when the project for a task is not found."""
+
+
+class CommentNotFoundError(ResourceNotFoundError):
+    """Raised when a comment is not found."""
+
+
+class CommentPermissionDeniedError(PermissionDeniedError):
+    """Raised when a user tries to mutate a comment they do not own without proper roles."""
+
+
+class TaskLabelAlreadyExistsError(ConflictError):
+    """Raised when attempting to attach a label that is already attached to a task."""
+
+
+class TaskLabelNotFoundError(ResourceNotFoundError):
+    """Raised when attempting to detach a label that is not attached to a task."""
+
+
+class LabelProjectMismatchError(ConflictError):
+    """Raised when attempting to attach a label that belongs to a different project than the task."""

@@ -42,7 +42,14 @@ def test_project_and_label_models_define_the_expected_schema() -> None:
     projects = Base.metadata.tables["projects"]
     labels = Base.metadata.tables["labels"]
 
-    assert {column.name for column in projects.columns} == {"id", "workspace_id", "name", "description", "status", "created_at"}
+    assert {column.name for column in projects.columns} == {
+        "id",
+        "workspace_id",
+        "name",
+        "description",
+        "status",
+        "created_at",
+    }
     assert {column.name for column in labels.columns} == {
         "id",
         "project_id",

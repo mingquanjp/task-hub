@@ -13,6 +13,7 @@ from taskhub.infrastructure.database.base import Base
 
 if TYPE_CHECKING:
     from taskhub.infrastructure.database.models.label import LabelModel
+    from taskhub.infrastructure.database.models.task import TaskModel
     from taskhub.infrastructure.database.models.workspace import WorkspaceModel
 
 
@@ -40,6 +41,11 @@ class ProjectModel(Base):
         back_populates="projects",
     )
     labels: Mapped[list[LabelModel]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    tasks: Mapped[list[TaskModel]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
         passive_deletes=True,

@@ -18,7 +18,7 @@ def app() -> FastAPI:
     fastapi_app.add_middleware(RequestLoggingMiddleware)
     fastapi_app.add_middleware(RequestContextMiddleware)
 
-    fastapi_app.add_exception_handler(DomainError, domain_error_handler)
+    fastapi_app.add_exception_handler(DomainError, domain_error_handler)  # type: ignore
     fastapi_app.add_exception_handler(Exception, internal_error_handler)
 
     @fastapi_app.get("/success")

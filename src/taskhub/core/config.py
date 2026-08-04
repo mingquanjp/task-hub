@@ -16,6 +16,28 @@ class Settings(BaseSettings):
     )
 
     database_url: str
+    app_env: str = "development"
+    log_level: str = "INFO"
+    redis_url: str | None = None
+    task_list_cache_ttl_seconds: int = 300
+    email_enabled: bool = False
+
+    @field_validator("app_env")
+    @classmethod
+    def validate_app_env(cls, value: str) -> str:
+        """Ensure APP_ENV is one of the allowed values."""
+        allowed = {"development", "test", "production"}
+        if value not in allowed:
+            raise ValueError(f"APP_ENV must be one of {allowed}")
+        return value
+
+    @field_validator("task_list_cache_ttl_seconds")
+    @classmethod
+    def validate_ttl(cls, value: int) -> int:
+        """Ensure TTL is greater than 0."""
+        if value <= 0:
+            raise ValueError("TASK_LIST_CACHE_TTL_SECONDS must be greater than 0")
+        return value
 
     @field_validator("database_url")
     @classmethod

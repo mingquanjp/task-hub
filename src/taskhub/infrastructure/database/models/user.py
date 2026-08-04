@@ -14,7 +14,9 @@ from taskhub.infrastructure.database.base import Base
 from taskhub.modules.auth.entities import UserRole
 
 if TYPE_CHECKING:
+    from taskhub.infrastructure.database.models.comment import CommentModel
     from taskhub.infrastructure.database.models.refresh_token import RefreshTokenModel
+    from taskhub.infrastructure.database.models.task import TaskModel
     from taskhub.infrastructure.database.models.workspace import WorkspaceModel
     from taskhub.infrastructure.database.models.workspace_member import WorkspaceMemberModel
 
@@ -54,4 +56,15 @@ class UserModel(Base):
         back_populates="user",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+    assigned_tasks: Mapped[list[TaskModel]] = relationship(
+        foreign_keys="[TaskModel.assignee_id]",
+        back_populates="assignee",
+    )
+    comments: Mapped[list[CommentModel]] = relationship(
+        back_populates="author", cascade="all, delete-orphan"
+    )
+    created_tasks: Mapped[list[TaskModel]] = relationship(
+        foreign_keys="[TaskModel.created_by]",
+        back_populates="creator",
     )

@@ -107,12 +107,6 @@ async def update_project(
     service: ProjectServiceDep,
 ) -> ProjectResponse:
     """Update a project partially."""
-    # Check if body is totally empty
-    if not data.model_fields_set:
-        from fastapi import HTTPException
-        # Throw 422 if empty body since it's required to have at least one field
-        raise HTTPException(status_code=422, detail="Empty request body")
-
     description_is_set = "description" in data.model_fields_set
 
     project = await service.update(

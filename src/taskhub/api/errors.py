@@ -8,17 +8,27 @@ from fastapi.responses import JSONResponse
 
 from taskhub.api.schemas import ErrorResponse
 from taskhub.core.exceptions import (
+    CommentNotFoundError,
+    CommentPermissionDeniedError,
     DomainError,
     InactiveUserError,
     IncorrectCurrentPasswordError,
     InvalidCredentialsError,
     InvalidProjectStateError,
+    InvalidTaskStateError,
     InvalidTokenError,
     InvalidWorkspaceRoleError,
+    LabelProjectMismatchError,
     PermissionDeniedError,
     ProjectAlreadyArchivedError,
     ProjectNotFoundError,
     ResourceNotFoundError,
+    TaskAssigneeNotFoundError,
+    TaskAssigneeNotWorkspaceMemberError,
+    TaskLabelAlreadyExistsError,
+    TaskLabelNotFoundError,
+    TaskNotFoundError,
+    TaskProjectNotFoundError,
     TokenRevokedError,
     UserAlreadyExistsError,
     UserNotFoundError,
@@ -101,10 +111,46 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
         status_code = 409
         code = "project_already_archived"
         message = "Project is already archived"
-    elif isinstance(exc, InvalidProjectStateError):
+    elif isinstance(exc, (InvalidProjectStateError, InvalidTaskStateError)):
         status_code = 409
-        code = "invalid_project_state"
-        message = "Invalid project state for operation"
+        code = "invalid_state"
+        message = "Invalid state for operation"
+    elif isinstance(exc, TaskNotFoundError):
+        status_code = 404
+        code = "task_not_found"
+        message = "Task not found"
+    elif isinstance(exc, TaskAssigneeNotFoundError):
+        status_code = 404
+        code = "task_assignee_not_found"
+        message = "Task assignee not found"
+    elif isinstance(exc, TaskAssigneeNotWorkspaceMemberError):
+        status_code = 403
+        code = "task_assignee_not_workspace_member"
+        message = "Assignee is not a member of the workspace"
+    elif isinstance(exc, TaskProjectNotFoundError):
+        status_code = 404
+        code = "task_project_not_found"
+        message = "Project for the task not found"
+    elif isinstance(exc, CommentNotFoundError):
+        status_code = 404
+        code = "comment_not_found"
+        message = "Comment not found"
+    elif isinstance(exc, CommentPermissionDeniedError):
+        status_code = 403
+        code = "comment_permission_denied"
+        message = "You do not have permission to modify this comment"
+    elif isinstance(exc, TaskLabelNotFoundError):
+        status_code = 404
+        code = "task_label_not_found"
+        message = "Task label association not found"
+    elif isinstance(exc, TaskLabelAlreadyExistsError):
+        status_code = 409
+        code = "task_label_already_exists"
+        message = "Label is already attached to this task"
+    elif isinstance(exc, LabelProjectMismatchError):
+        status_code = 409
+        code = "label_project_mismatch"
+        message = "Label belongs to a different project"
 
     response = ErrorResponse(code=code, message=message, request_id=request_id)
     if headers is None:

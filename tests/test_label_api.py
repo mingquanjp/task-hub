@@ -30,7 +30,7 @@ def get_token(client: TestClient, email: str = "owner@test.com") -> str:
         "/api/v1/auth/login",
         json={"email": email, "password": "password123"},
     )
-    return resp.json()["access_token"]
+    return resp.json()["access_token"]  # type: ignore
 
 
 def setup_workspace_and_project(client: TestClient, token: str) -> str:
@@ -38,13 +38,13 @@ def setup_workspace_and_project(client: TestClient, token: str) -> str:
     headers = {"Authorization": f"Bearer {token}"}
     ws_resp = client.post("/api/v1/workspaces", json={"name": "WS"}, headers=headers)
     ws_id = ws_resp.json()["id"]
-    
+
     p_resp = client.post(
         f"/api/v1/workspaces/{ws_id}/projects",
         json={"name": "Proj"},
         headers=headers,
     )
-    return p_resp.json()["id"]
+    return p_resp.json()["id"]  # type: ignore
 
 
 def test_label_crud_happy_path(client: TestClient) -> None:
@@ -54,7 +54,9 @@ def test_label_crud_happy_path(client: TestClient) -> None:
     base_path = f"/api/v1/projects/{project_id}/labels"
 
     # Create
-    created_response = client.post(base_path, json={"name": "Backend", "color": "#1a73e8"}, headers=headers)
+    created_response = client.post(
+        base_path, json={"name": "Backend", "color": "#1a73e8"}, headers=headers
+    )
     assert created_response.status_code == 201
     created = created_response.json()
     assert created["name"] == "Backend"
@@ -86,12 +88,18 @@ def test_label_crud_happy_path(client: TestClient) -> None:
 
 def test_label_requires_auth(client: TestClient) -> None:
     project_id = uuid4()
-    resp = client.post(f"/api/v1/projects/{project_id}/labels", json={"name": "X", "color": "#000000"})
+    resp = client.post(
+        f"/api/v1/projects/{project_id}/labels", json={"name": "X", "color": "#000000"}
+    )
     assert resp.status_code == 401
 
 
 def test_label_project_not_found(client: TestClient) -> None:
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
-    resp = client.post(f"/api/v1/projects/{uuid4()}/labels", json={"name": "X", "color": "#000000"}, headers=headers)
+    resp = client.post(
+        f"/api/v1/projects/{uuid4()}/labels",
+        json={"name": "X", "color": "#000000"},
+        headers=headers,
+    )
     assert resp.status_code == 404

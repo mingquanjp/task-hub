@@ -22,9 +22,17 @@ async def create_project(database: Database, project_id: UUID) -> None:
     workspace_id = uuid4()
     owner_id = uuid4()
     async with database.session_factory() as session:
-        session.add(UserModel(id=owner_id, email=f"{owner_id}@test.com", hashed_password="hash", full_name="Test"))
+        session.add(
+            UserModel(
+                id=owner_id, email=f"{owner_id}@test.com", hashed_password="hash", full_name="Test"
+            )
+        )
         session.add(WorkspaceModel(id=workspace_id, name="Test WS", owner_id=owner_id))
-        session.add(ProjectModel(id=project_id, workspace_id=workspace_id, name="Test Project", status="ACTIVE"))
+        session.add(
+            ProjectModel(
+                id=project_id, workspace_id=workspace_id, name="Test Project", status="ACTIVE"
+            )
+        )
         await session.commit()
 
 
