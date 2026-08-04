@@ -10,11 +10,15 @@ TaskHub is a FastAPI task-management API. It currently provides a database-backe
 - Workspaces and Workspace Members with Role-Based Access Control (OWNER, EDITOR, VIEWER).
 - Project management within workspaces.
 - Task management within projects (Status, Priority, Assignee, Filters, Pagination).
+- Task commenting system with full CRUD operations.
+- Task label management (many-to-many relationship).
+- Optional Redis caching for high-read APIs.
+- Global exception handling and request logging middlewares.
 - Pydantic v2 validation: non-empty names up to 50 characters and normalized `#RRGGBB` colors.
 - PostgreSQL persistence with SQLAlchemy 2.x async, psycopg, and Alembic.
 - Authentication: user persistence, Argon2 password hashing, JWT access/refresh tokens, and register/login/refresh/logout flows.
 
-User profile, Comments, Notification, and Background Task are intentionally outside the current scope. Authentication, Workspaces, Projects, and Task Management APIs are now available.
+User profile, Notification, and Background Task are intentionally outside the current scope. Authentication, Workspaces, Projects, Tasks, Comments, and Label Management APIs are now available.
 
 ## Requirements
 
@@ -85,6 +89,12 @@ All label endpoints are tagged `labels` in Swagger. `project_id` and `label_id` 
 | `GET` | `/api/v1/tasks/{task_id}` | 200 | Get a task. |
 | `PATCH` | `/api/v1/tasks/{task_id}` | 200 | Partially update a task. |
 | `DELETE` | `/api/v1/tasks/{task_id}` | 204 | Delete a task. |
+| `POST` | `/api/v1/tasks/{task_id}/labels/{label_id}` | 201 | Attach a label to a task. |
+| `DELETE` | `/api/v1/tasks/{task_id}/labels/{label_id}` | 204 | Detach a label from a task. |
+| `POST` | `/api/v1/tasks/{task_id}/comments` | 201 | Create a comment on a task. |
+| `GET` | `/api/v1/tasks/{task_id}/comments` | 200 | List paginated comments for a task. |
+| `PATCH` | `/api/v1/tasks/{task_id}/comments/{comment_id}` | 200 | Partially update a comment. |
+| `DELETE` | `/api/v1/tasks/{task_id}/comments/{comment_id}` | 204 | Delete a comment. |
 
 `POST` returns `404` when the parent project does not exist. `GET`, `PATCH`, and `DELETE` return `404` when the resource does not exist. Invalid UUIDs and invalid request bodies return FastAPI's `422` validation response. Workspace mutation actions (like creating/updating tasks) require appropriate workspace roles.
 
@@ -251,3 +261,13 @@ Tests are split by boundary:
 - `tests/test_application.py`: lifespan, health, router composition, OpenAPI, Swagger, and ReDoc.
 
 The integration suite covers the CRUD happy path, validation failures, project boundaries, 404 after deletion, application-instance isolation, and dependency overrides.
+
+## Task 7 - Cross-cutting Features
+
+Task 7 introduces several enterprise features:
+
+- **Comments**: Task comments are supported with full CRUD. Permissions: Authors can update/delete their own comments. Workspace OWNERs can delete any comment. EDITORs and VIEWERs can only manage their own comments. Non-members receive a 403 or 404 response.
+- **Task-Labels**: Labels can be attached to Tasks. Rule: The label must belong to the same project as the task. OWNERs and EDITORs can attach/detach labels; VIEWERs receive a 403 Forbidden error. Attaching a label from a different project returns 409 Conflict. Duplicate attaches return 409 Conflict. Detaching is idempotent (returns 204).
+- **Redis Cache**: The GET `/api/v1/projects/{project_id}/tasks` endpoint is cached using Redis. Cache keys include project ID, status, priority, assignee, page, and limit dimensions. Invalidation happens via a version key incremented on task mutation.
+- **Environment Configuration**: `APP_ENV` supports `development`, `test`, and `production`. `REDIS_URL` configures Redis caching (if omitted or if Redis is down, the system gracefully falls back to PostgreSQL). `TASK_LIST_CACHE_TTL_SECONDS` configures the cache TTL (default 300s). `LOG_LEVEL` controls structured logging depth.
+- **Background Task**: Email notification on task assignment is currently deferred/optional.
