@@ -13,6 +13,7 @@ from taskhub.infrastructure.database.base import Base
 
 if TYPE_CHECKING:
     from taskhub.infrastructure.database.models.project import ProjectModel
+    from taskhub.infrastructure.database.models.task import TaskModel
 
 
 class LabelModel(Base):
@@ -34,4 +35,6 @@ class LabelModel(Base):
         nullable=False,
     )
 
+    # Relationships
     project: Mapped[ProjectModel] = relationship(back_populates="labels")
+    tasks: Mapped[list[TaskModel]] = relationship(secondary="task_labels", back_populates="labels")

@@ -12,6 +12,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from taskhub.infrastructure.database.base import Base
 
 if TYPE_CHECKING:
+    from taskhub.infrastructure.database.models.comment import CommentModel
+    from taskhub.infrastructure.database.models.label import LabelModel
     from taskhub.infrastructure.database.models.project import ProjectModel
     from taskhub.infrastructure.database.models.user import UserModel
 
@@ -52,15 +54,15 @@ class TaskModel(Base):
         nullable=False,
     )
 
-    project: Mapped[ProjectModel] = relationship(
-        back_populates="tasks",
-        passive_deletes=True,
-    )
+    # Relationships
+    project: Mapped[ProjectModel] = relationship(back_populates="tasks")
     assignee: Mapped[UserModel | None] = relationship(
-        foreign_keys=[assignee_id],
-        back_populates="assigned_tasks",
+        foreign_keys=[assignee_id], back_populates="assigned_tasks"
     )
     creator: Mapped[UserModel] = relationship(
-        foreign_keys=[created_by],
-        back_populates="created_tasks",
+        foreign_keys=[created_by], back_populates="created_tasks"
     )
+    comments: Mapped[list[CommentModel]] = relationship(
+        back_populates="task", cascade="all, delete-orphan"
+    )
+    labels: Mapped[list[LabelModel]] = relationship(secondary="task_labels", back_populates="tasks")
