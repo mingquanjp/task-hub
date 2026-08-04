@@ -12,9 +12,9 @@ from taskhub.modules.projects.entities import ProjectStatus
 class ProjectCreate(BaseModel):
     """Schema for creating a project."""
 
-    name: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=150)
-    ] = Field(..., description="Name of the project")
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=150)] = (
+        Field(..., description="Name of the project")
+    )
     description: Annotated[
         str | None, StringConstraints(strip_whitespace=True, max_length=2000)
     ] = Field(None, description="Optional project description")
@@ -25,12 +25,13 @@ class ProjectCreate(BaseModel):
 class ProjectUpdate(BaseModel):
     """Schema for partially updating a project."""
 
-    name: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=150)
-    ] | None = Field(None, description="Name of the project")
-    description: Annotated[
-        str | None, StringConstraints(strip_whitespace=True, max_length=2000)
-    ] | None = Field(None, description="Optional project description")
+    name: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=150)]
+        | None
+    ) = Field(None, description="Name of the project")
+    description: (
+        Annotated[str | None, StringConstraints(strip_whitespace=True, max_length=2000)] | None
+    ) = Field(None, description="Optional project description")
 
     model_config = ConfigDict(extra="forbid")
 

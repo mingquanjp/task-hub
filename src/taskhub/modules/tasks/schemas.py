@@ -26,12 +26,13 @@ class TaskCreate(BaseModel):
 class TaskUpdate(BaseModel):
     """Schema for partially updating a task."""
 
-    title: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=150)
-    ] | None = Field(None, description="Title of the task")
-    description: Annotated[
-        str | None, StringConstraints(strip_whitespace=True, max_length=2000)
-    ] | None = Field(None, description="Optional task description")
+    title: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=150)]
+        | None
+    ) = Field(None, description="Title of the task")
+    description: (
+        Annotated[str | None, StringConstraints(strip_whitespace=True, max_length=2000)] | None
+    ) = Field(None, description="Optional task description")
     assignee_id: UUID | None = Field(None, description="Optional assignee user ID")
     status: TaskStatus | None = Field(None, description="Task status")
     priority: TaskPriority | None = Field(None, description="Task priority")

@@ -1,19 +1,26 @@
 """Service layer for task management."""
 
+import json
+import logging
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
+
+from redis.asyncio import Redis
 
 from taskhub.core.exceptions import (
     InvalidProjectStateError,
     TaskAssigneeNotWorkspaceMemberError,
     TaskNotFoundError,
 )
+from taskhub.modules.labels.repository import LabelRepository
 from taskhub.modules.projects.entities import ProjectStatus
 from taskhub.modules.projects.repository import ProjectRepository
 from taskhub.modules.tasks.entities import Task, TaskPriority, TaskStatus
 from taskhub.modules.tasks.repository import TaskRepository
 from taskhub.modules.workspaces.repository import WorkspaceMemberRepository
+
+logger = logging.getLogger(__name__)
 
 
 class TaskService:
@@ -23,11 +30,28 @@ class TaskService:
         self,
         task_repo: TaskRepository,
         project_repo: ProjectRepository,
+        label_repo: LabelRepository,
         workspace_member_repo: WorkspaceMemberRepository,
+        redis: Redis | None = None,
+        cache_ttl: int = 300,
     ) -> None:
         self._task_repo = task_repo
         self._project_repo = project_repo
+        self._label_repo = label_repo
         self._member_repo = workspace_member_repo
+        self._redis = redis
+        self._cache_ttl = cache_ttl
+
+    async def _invalidate_project_cache(self, project_id: UUID) -> None:
+        if self._redis:
+            try:
+                await self._redis.incr(f"task_list_version:{project_id}")
+            except Exception:
+                logger.warning(
+                    "Redis cache invalidation failed",
+                    exc_info=True,
+                    extra={"project_id": str(project_id), "operation": "invalidate"},
+                )
 
     async def _assert_project_active(self, project_id: UUID) -> None:
         """Ensure the project exists and is active."""
@@ -37,8 +61,9 @@ class TaskService:
             # We use ValueError or generic since Router dependencies should handle 404s
             # for projects. But just in case:
             from taskhub.core.exceptions import ProjectNotFoundError
+
             raise ProjectNotFoundError(f"Project {project_id} not found")
-        
+
         if project.status == ProjectStatus.ARCHIVED:
             raise InvalidProjectStateError("Cannot modify tasks in an archived project")
 
@@ -47,8 +72,9 @@ class TaskService:
         project = await self._project_repo.get_by_id(project_id)
         if not project:
             from taskhub.core.exceptions import ProjectNotFoundError
+
             raise ProjectNotFoundError(f"Project {project_id} not found")
-            
+
         member = await self._member_repo.get(project.workspace_id, assignee_id)
         if not member:
             raise TaskAssigneeNotWorkspaceMemberError(
@@ -83,7 +109,9 @@ class TaskService:
             created_by=creator_id,
             created_at=datetime.now(UTC),
         )
-        return await self._task_repo.create(task)
+        created_task = await self._task_repo.create(task)
+        await self._invalidate_project_cache(project_id)
+        return created_task
 
     async def get_by_id(self, task_id: UUID) -> Task:
         """Get a task by ID."""
@@ -108,7 +136,7 @@ class TaskService:
     ) -> Task:
         """Update an existing task."""
         task = await self.get_by_id(task_id)
-        
+
         # Determine if we can modify the task
         await self._assert_project_active(task.project_id)
 
@@ -128,18 +156,48 @@ class TaskService:
         if due_date_is_set:
             task.due_date = due_date
 
-        return await self._task_repo.update(task)
+        updated_task = await self._task_repo.update(task)
+        await self._invalidate_project_cache(task.project_id)
+        return updated_task
 
     async def delete(self, task_id: UUID) -> None:
         """Delete a task."""
         task = await self.get_by_id(task_id)
-        
+
         # Policy note: We don't restrict deleting tasks in archived projects?
-        # The prompt says "Delete task xử lý theo policy đã thống nhất". 
+        # The prompt says "Delete task xử lý theo policy đã thống nhất".
         # For projects, archive is read-only. We'll enforce it.
         await self._assert_project_active(task.project_id)
-        
+
         await self._task_repo.delete(task_id)
+        await self._invalidate_project_cache(task.project_id)
+
+    async def attach_label(self, task_id: UUID, label_id: UUID) -> None:
+        """Attach a label to a task."""
+        task = await self.get_by_id(task_id)
+        await self._assert_project_active(task.project_id)
+
+        label = await self._label_repo.get_by_id(label_id)
+        if not label:
+            from taskhub.core.exceptions import ResourceNotFoundError
+
+            raise ResourceNotFoundError(f"Label {label_id} not found")
+
+        if label.project_id != task.project_id:
+            from taskhub.core.exceptions import LabelProjectMismatchError
+
+            raise LabelProjectMismatchError("Label belongs to a different project")
+
+        await self._task_repo.attach_label(task_id, label_id)
+        await self._invalidate_project_cache(task.project_id)
+
+    async def detach_label(self, task_id: UUID, label_id: UUID) -> None:
+        """Detach a label from a task."""
+        task = await self.get_by_id(task_id)
+        await self._assert_project_active(task.project_id)
+
+        await self._task_repo.detach_label(task_id, label_id)
+        await self._invalidate_project_cache(task.project_id)
 
     async def list_by_project(
         self,
@@ -156,9 +214,58 @@ class TaskService:
             raise ValueError("Page must be >= 1")
         if limit < 1 or limit > 100:
             raise ValueError("Limit must be between 1 and 100")
-            
+
         offset = (page - 1) * limit
-        return await self._task_repo.list_by_project(
+
+        if self._redis:
+            try:
+                version = await self._redis.get(f"task_list_version:{project_id}")
+                if not version:
+                    version_str = "1"
+                    await self._redis.set(f"task_list_version:{project_id}", version_str)
+                else:
+                    version_str = (
+                        version.decode("utf-8") if isinstance(version, bytes) else str(version)
+                    )
+
+                status_str = status.value if status else "any"
+                priority_str = priority.value if priority else "any"
+                assignee_str = str(assignee_id) if assignee_id else "any"
+
+                cache_key = f"tasks:{project_id}:v{version_str}:{status_str}:{priority_str}:{assignee_str}:{page}:{limit}"
+                cached_data = await self._redis.get(cache_key)
+
+                if cached_data:
+                    parsed = json.loads(cached_data)
+                    tasks = []
+                    for t_dict in parsed["tasks"]:
+                        tasks.append(
+                            Task(
+                                id=UUID(t_dict["id"]),
+                                project_id=UUID(t_dict["project_id"]),
+                                assignee_id=UUID(t_dict["assignee_id"])
+                                if t_dict.get("assignee_id")
+                                else None,
+                                title=t_dict["title"],
+                                description=t_dict.get("description"),
+                                status=TaskStatus(t_dict["status"]),
+                                priority=TaskPriority(t_dict["priority"]),
+                                due_date=datetime.fromisoformat(t_dict["due_date"])
+                                if t_dict.get("due_date")
+                                else None,
+                                created_by=UUID(t_dict["created_by"]),
+                                created_at=datetime.fromisoformat(t_dict["created_at"]),
+                            )
+                        )
+                    return tasks, parsed["total"]
+            except Exception:
+                logger.warning(
+                    "Redis cache get failed",
+                    exc_info=True,
+                    extra={"project_id": str(project_id), "operation": "get"},
+                )
+
+        db_tasks, total = await self._task_repo.list_by_project(
             project_id=project_id,
             status=status,
             priority=priority,
@@ -166,3 +273,34 @@ class TaskService:
             offset=offset,
             limit=limit,
         )
+
+        if self._redis:
+            try:
+                tasks_dict = [
+                    {
+                        "id": str(t.id),
+                        "project_id": str(t.project_id),
+                        "assignee_id": str(t.assignee_id) if t.assignee_id else None,
+                        "title": t.title,
+                        "description": t.description,
+                        "status": t.status.value,
+                        "priority": t.priority.value,
+                        "due_date": t.due_date.isoformat() if t.due_date else None,
+                        "created_by": str(t.created_by),
+                        "created_at": t.created_at.isoformat(),
+                    }
+                    for t in db_tasks
+                ]
+                await self._redis.setex(
+                    cache_key,
+                    self._cache_ttl,
+                    json.dumps({"tasks": tasks_dict, "total": total}),
+                )
+            except Exception:
+                logger.warning(
+                    "Redis cache set failed",
+                    exc_info=True,
+                    extra={"project_id": str(project_id), "operation": "set"},
+                )
+
+        return db_tasks, total

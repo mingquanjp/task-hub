@@ -22,9 +22,7 @@ from taskhub.modules.tasks.schemas import TaskCreate, TaskResponse, TaskUpdate
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 # Router for paths prefixed with /projects/{project_id}/tasks
-project_tasks_router = APIRouter(
-    prefix="/projects/{project_id}/tasks", tags=["tasks"]
-)
+project_tasks_router = APIRouter(prefix="/projects/{project_id}/tasks", tags=["tasks"])
 
 
 @project_tasks_router.post(
@@ -132,6 +130,7 @@ async def update_task(
     """Update a task partially."""
     if not data.model_fields_set:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=422, detail="Empty request body")
 
     task = await service.update(
@@ -165,3 +164,42 @@ async def delete_task(
 ) -> None:
     """Delete a task."""
     await service.delete(task_id)
+
+
+@router.post(
+    "/{task_id}/labels/{label_id}",
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
+        403: {"model": ErrorResponse, "description": "Forbidden"},
+        404: {"model": ErrorResponse, "description": "Task or Label not found"},
+        409: {"model": ErrorResponse, "description": "Label already attached or mismatch"},
+    },
+)
+async def attach_label(
+    user_task_project: OwnerOrEditorTaskUserDep,
+    task_id: Annotated[UUID, Path(...)],
+    label_id: Annotated[UUID, Path(...)],
+    service: TaskServiceDep,
+) -> None:
+    """Attach a label to a task."""
+    await service.attach_label(task_id, label_id)
+
+
+@router.delete(
+    "/{task_id}/labels/{label_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
+        403: {"model": ErrorResponse, "description": "Forbidden"},
+        404: {"model": ErrorResponse, "description": "Task not found"},
+    },
+)
+async def detach_label(
+    user_task_project: OwnerOrEditorTaskUserDep,
+    task_id: Annotated[UUID, Path(...)],
+    label_id: Annotated[UUID, Path(...)],
+    service: TaskServiceDep,
+) -> None:
+    """Detach a label from a task."""
+    await service.detach_label(task_id, label_id)

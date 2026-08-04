@@ -78,6 +78,7 @@ async def require_project_member(
         # dùng trong Workspace."
         # Let's import PermissionDeniedError.
         from taskhub.core.exceptions import PermissionDeniedError
+
         raise PermissionDeniedError("User is not a member of this workspace")
 
     return user, project
@@ -111,8 +112,9 @@ def require_project_role(
 
         # Verify membership and role
         member = await member_repo.get(workspace.id, user.id)
-        
+
         from taskhub.core.exceptions import PermissionDeniedError
+
         if not member:
             raise PermissionDeniedError("User is not a member of this workspace")
 

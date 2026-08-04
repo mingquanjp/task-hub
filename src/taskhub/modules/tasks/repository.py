@@ -26,6 +26,14 @@ class TaskRepository(Protocol):
         """Delete a task."""
         ...
 
+    async def attach_label(self, task_id: UUID, label_id: UUID) -> None:
+        """Attach a label to a task."""
+        ...
+
+    async def detach_label(self, task_id: UUID, label_id: UUID) -> None:
+        """Detach a label from a task."""
+        ...
+
     async def list_by_project(
         self,
         project_id: UUID,
@@ -38,7 +46,7 @@ class TaskRepository(Protocol):
     ) -> tuple[Sequence[Task], int]:
         """
         List tasks in a project with optional filtering and pagination.
-        
+
         Returns:
             A tuple of (tasks, total_count).
         """

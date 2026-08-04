@@ -6,10 +6,12 @@ from uuid import UUID
 
 from fastapi import Depends, Path
 
-from taskhub.api.dependencies import DbSessionDep
+from taskhub.api.dependencies import DbSessionDep, RedisClientDep
+from taskhub.core.config import get_settings
 from taskhub.core.exceptions import ResourceNotFoundError
 from taskhub.modules.auth.dependencies import CurrentUserDep
 from taskhub.modules.auth.entities import User
+from taskhub.modules.labels.dependencies import LabelRepositoryDep
 from taskhub.modules.projects.dependencies import (
     ProjectRepositoryDep,
     require_project_member,
@@ -39,9 +41,19 @@ def get_task_service(
     task_repo: TaskRepositoryDep,
     project_repo: ProjectRepositoryDep,
     member_repo: WorkspaceMemberRepositoryDep,
+    label_repo: LabelRepositoryDep,
+    redis: RedisClientDep,
 ) -> TaskService:
     """Provide the task service."""
-    return TaskService(task_repo, project_repo, member_repo)
+    settings = get_settings()
+    return TaskService(
+        task_repo,
+        project_repo,
+        label_repo,
+        member_repo,
+        redis,
+        cache_ttl=settings.task_list_cache_ttl_seconds,
+    )
 
 
 TaskServiceDep = Annotated[TaskService, Depends(get_task_service)]
@@ -72,8 +84,9 @@ async def require_task_member(
     project = await project_repo.get_by_id(task.project_id)
     if not project:
         from taskhub.core.exceptions import TaskProjectNotFoundError
+
         raise TaskProjectNotFoundError("Project for this task not found")
-        
+
     await require_project_member(user, project, workspace_repo, member_repo)
     return user, task, project
 
@@ -99,11 +112,12 @@ def require_task_role(
         project = await project_repo.get_by_id(task.project_id)
         if not project:
             from taskhub.core.exceptions import TaskProjectNotFoundError
+
             raise TaskProjectNotFoundError("Project for this task not found")
-            
+
         dep = require_project_role(*allowed_roles)
         await dep(user, project, workspace_repo, member_repo)
-        
+
         return user, task, project
 
     return _require_role
