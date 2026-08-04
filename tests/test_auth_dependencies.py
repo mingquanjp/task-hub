@@ -60,7 +60,7 @@ async def test_get_current_user_valid_access_token(
     pair = token_service.issue_pair(active_user.id)
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=pair.access_token)
 
-    user = await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
+    user = await get_current_user(credentials, token_service, repo)
     assert user.id == active_user.id
 
 
@@ -72,7 +72,7 @@ async def test_get_current_user_missing_credentials(
     repo = FakeUserRepository(active_user)
 
     with pytest.raises(InvalidTokenError):
-        await get_current_user(None, token_service, repo)  # type: ignore[arg-type]
+        await get_current_user(None, token_service, repo)
 
 
 @pytest.mark.asyncio
@@ -84,7 +84,7 @@ async def test_get_current_user_non_bearer(
     credentials = HTTPAuthorizationCredentials(scheme="Basic", credentials="abc")
 
     with pytest.raises(InvalidTokenError):
-        await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
+        await get_current_user(credentials, token_service, repo)
 
 
 @pytest.mark.asyncio
@@ -97,7 +97,7 @@ async def test_get_current_user_refresh_token_rejected(
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=pair.refresh_token)
 
     with pytest.raises(InvalidTokenError):
-        await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
+        await get_current_user(credentials, token_service, repo)
 
 
 @pytest.mark.asyncio
@@ -109,7 +109,7 @@ async def test_get_current_user_malformed_jwt(
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="not-a-jwt")
 
     with pytest.raises(InvalidTokenError):
-        await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
+        await get_current_user(credentials, token_service, repo)
 
 
 @pytest.mark.asyncio
@@ -122,7 +122,7 @@ async def test_get_current_user_expired_jwt(
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=pair.access_token)
 
     with pytest.raises(InvalidTokenError):
-        await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
+        await get_current_user(credentials, token_service, repo)
 
 
 @pytest.mark.asyncio
@@ -134,7 +134,7 @@ async def test_get_current_user_user_not_found(
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=pair.access_token)
 
     with pytest.raises(InvalidTokenError):
-        await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
+        await get_current_user(credentials, token_service, repo)
 
 
 @pytest.mark.asyncio
@@ -148,4 +148,4 @@ async def test_get_current_user_inactive(
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=pair.access_token)
 
     with pytest.raises(InactiveUserError):
-        await get_current_user(credentials, token_service, repo)  # type: ignore[arg-type]
+        await get_current_user(credentials, token_service, repo)

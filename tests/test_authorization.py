@@ -6,7 +6,11 @@ from uuid import uuid4
 import pytest
 
 from taskhub.core.exceptions import PermissionDeniedError
-from taskhub.modules.auth.authorization import ResourceAction, WorkspaceRole, can_perform_action
+from taskhub.modules.auth.authorization import (  # type: ignore
+    ResourceAction,
+    WorkspaceRole,
+    can_perform_action,
+)
 from taskhub.modules.auth.dependencies import require_admin
 from taskhub.modules.auth.entities import User, UserRole
 

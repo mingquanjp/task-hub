@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from taskhub.application import create_app
 from taskhub.core.config import SecuritySettings
-from taskhub.modules.labels.dependencies import (
+from taskhub.modules.labels.dependencies import (  # type: ignore
     LabelServiceDep,
     get_db_session,
     get_label_repository,

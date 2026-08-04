@@ -51,7 +51,7 @@ class InMemoryRefreshTokenRepository:
 
     async def revoke(self, token_id: UUID, revoked_at: datetime) -> bool:
         if token_id in self.tokens and self.tokens[token_id].revoked_at is None:
-            self.tokens[token_id].revoked_at = revoked_at
+            self.tokens[token_id].revoked_at = revoked_at  # type: ignore
             return True
         return False
 
@@ -60,7 +60,7 @@ class InMemoryRefreshTokenRepository:
         count = 0
         for token in self.tokens.values():
             if token.user_id == user_id and token.revoked_at is None:
-                token.revoked_at = revoked_at
+                token.revoked_at = revoked_at  # type: ignore
                 count += 1
         return count
 

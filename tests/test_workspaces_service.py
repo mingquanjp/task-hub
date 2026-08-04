@@ -27,7 +27,7 @@ class FakeWorkspaceRepository:
     async def get_by_id(self, workspace_id: UUID) -> Workspace | None:
         return self.workspaces.get(workspace_id)
 
-    async def get_by_id_with_members(
+    async def get_by_id_with_members(  # type: ignore
         self,
         workspace_id: UUID,
     ) -> tuple[Workspace, list[WorkspaceMember]] | None:
@@ -81,7 +81,7 @@ def fakes() -> tuple[FakeWorkspaceRepository, FakeWorkspaceMemberRepository, Fak
 
 
 @pytest.fixture
-def service(fakes: tuple) -> WorkspaceService:
+def service(fakes: tuple) -> WorkspaceService:  # type: ignore
     workspace_repo, member_repo, user_repo = fakes
 
     # Monkey-patch get_by_id_with_members to return members from member_repo
@@ -94,7 +94,7 @@ def service(fakes: tuple) -> WorkspaceService:
         members = [m for m in member_repo.members.values() if m.workspace_id == workspace_id]
         return workspace, members
 
-    workspace_repo.get_by_id_with_members = get_by_id_with_members  # type: ignore
+    workspace_repo.get_by_id_with_members = get_by_id_with_members
     return WorkspaceService(workspace_repo, member_repo, user_repo)
 
 
@@ -133,7 +133,7 @@ async def test_create_workspace(
 @pytest.mark.asyncio
 async def test_get_workspace_as_member(
     service: WorkspaceService,
-    fakes: tuple,
+    fakes: tuple,  # type: ignore
     actor: User,
 ) -> None:
     workspace = await service.create(actor, "My Workspace")
@@ -204,7 +204,7 @@ async def test_get_workspace_as_admin_allowed(
 @pytest.mark.asyncio
 async def test_invite_member(
     service: WorkspaceService,
-    fakes: tuple,
+    fakes: tuple,  # type: ignore
     actor: User,
 ) -> None:
     _, _, user_repo = fakes
@@ -228,7 +228,7 @@ async def test_invite_member(
 @pytest.mark.asyncio
 async def test_invite_member_prevent_owner_role(
     service: WorkspaceService,
-    fakes: tuple,
+    fakes: tuple,  # type: ignore
     actor: User,
 ) -> None:
     _, _, user_repo = fakes
@@ -252,7 +252,7 @@ async def test_invite_member_prevent_owner_role(
 @pytest.mark.asyncio
 async def test_remove_member(
     service: WorkspaceService,
-    fakes: tuple,
+    fakes: tuple,  # type: ignore
     actor: User,
 ) -> None:
     _, _, user_repo = fakes
@@ -280,7 +280,7 @@ async def test_remove_member(
 @pytest.mark.asyncio
 async def test_remove_owner_denied(
     service: WorkspaceService,
-    fakes: tuple,
+    fakes: tuple,  # type: ignore
     actor: User,
 ) -> None:
     workspace = await service.create(actor, "My Workspace")

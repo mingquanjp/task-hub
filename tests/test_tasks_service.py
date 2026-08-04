@@ -31,12 +31,26 @@ def mock_member_repo() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_label_repo() -> AsyncMock:
+    return AsyncMock()
+
+
+@pytest.fixture
+def mock_redis() -> AsyncMock:
+    return AsyncMock()
+
+
+@pytest.fixture
 def service(
     mock_task_repo: AsyncMock,
     mock_project_repo: AsyncMock,
+    mock_label_repo: AsyncMock,
     mock_member_repo: AsyncMock,
+    mock_redis: AsyncMock,
 ) -> TaskService:
-    return TaskService(mock_task_repo, mock_project_repo, mock_member_repo)
+    return TaskService(
+        mock_task_repo, mock_project_repo, mock_label_repo, mock_member_repo, mock_redis
+    )
 
 
 @pytest.mark.asyncio
@@ -49,11 +63,16 @@ async def test_create_task_success(
     project_id = uuid4()
     creator_id = uuid4()
     workspace_id = uuid4()
-    
+
     mock_project_repo.get_by_id.return_value = Project(
-        project_id, workspace_id, "Proj", None, ProjectStatus.ACTIVE, None
+        project_id,
+        workspace_id,
+        "Proj",
+        None,
+        ProjectStatus.ACTIVE,
+        None,  # type: ignore
     )
-    
+
     mock_task_repo.create.return_value = Task(
         id=uuid4(),
         project_id=project_id,
@@ -82,7 +101,12 @@ async def test_create_task_archived_project(
 ) -> None:
     project_id = uuid4()
     mock_project_repo.get_by_id.return_value = Project(
-        project_id, uuid4(), "Proj", None, ProjectStatus.ARCHIVED, None
+        project_id,
+        uuid4(),
+        "Proj",
+        None,
+        ProjectStatus.ARCHIVED,
+        None,  # type: ignore
     )
 
     with pytest.raises(InvalidProjectStateError):
@@ -98,7 +122,12 @@ async def test_create_task_assignee_not_member(
     project_id = uuid4()
     assignee_id = uuid4()
     mock_project_repo.get_by_id.return_value = Project(
-        project_id, uuid4(), "Proj", None, ProjectStatus.ACTIVE, None
+        project_id,
+        uuid4(),
+        "Proj",
+        None,
+        ProjectStatus.ACTIVE,
+        None,  # type: ignore
     )
     mock_member_repo.get.return_value = None
 
@@ -114,7 +143,7 @@ async def test_update_task_success(
 ) -> None:
     task_id = uuid4()
     project_id = uuid4()
-    
+
     task = Task(
         id=task_id,
         project_id=project_id,
@@ -129,14 +158,19 @@ async def test_update_task_success(
     )
     mock_task_repo.get_by_id.return_value = task
     mock_project_repo.get_by_id.return_value = Project(
-        project_id, uuid4(), "Proj", None, ProjectStatus.ACTIVE, None
+        project_id,
+        uuid4(),
+        "Proj",
+        None,
+        ProjectStatus.ACTIVE,
+        None,  # type: ignore
     )
-    
+
     # We update title and status
     mock_task_repo.update.return_value = task
-    
+
     updated = await service.update(task_id, title="New", status=TaskStatus.IN_PROGRESS)
-    
+
     assert updated.title == "New"
     assert updated.status == TaskStatus.IN_PROGRESS
     mock_task_repo.update.assert_called_once()

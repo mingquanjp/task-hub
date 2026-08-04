@@ -17,15 +17,19 @@ async def setup_environment(database: Database) -> tuple[UUID, UUID, UUID]:
     user_id = uuid4()
     workspace_id = uuid4()
     project_id = uuid4()
-    
+
     async with database.session_factory() as session:
-        session.add(UserModel(id=user_id, email=f"{user_id}@test.com", hashed_password="hash", full_name="Test"))
+        session.add(
+            UserModel(
+                id=user_id, email=f"{user_id}@test.com", hashed_password="hash", full_name="Test"
+            )
+        )
         session.add(WorkspaceModel(id=workspace_id, name="Test WS", owner_id=user_id))
         session.add(
             ProjectModel(
-                id=project_id, 
-                workspace_id=workspace_id, 
-                name="Test Project", 
+                id=project_id,
+                workspace_id=workspace_id,
+                name="Test Project",
                 status=ProjectStatus.ACTIVE.value,
             )
         )
@@ -100,21 +104,42 @@ async def test_list_by_project_filtering(database_url: str) -> None:
         repo = SQLAlchemyTaskRepository(session)
         # Create 3 tasks with different statuses/priorities
         t1 = Task(
-            id=uuid4(), project_id=project_id, assignee_id=None, title="T1", description=None, 
-            status=TaskStatus.TODO, priority=TaskPriority.LOW, due_date=None, 
-            created_by=user_id, created_at=datetime.now(UTC)
+            id=uuid4(),
+            project_id=project_id,
+            assignee_id=None,
+            title="T1",
+            description=None,
+            status=TaskStatus.TODO,
+            priority=TaskPriority.LOW,
+            due_date=None,
+            created_by=user_id,
+            created_at=datetime.now(UTC),
         )
         t2 = Task(
-            id=uuid4(), project_id=project_id, assignee_id=None, title="T2", description=None, 
-            status=TaskStatus.IN_PROGRESS, priority=TaskPriority.HIGH, due_date=None, 
-            created_by=user_id, created_at=datetime.now(UTC)
+            id=uuid4(),
+            project_id=project_id,
+            assignee_id=None,
+            title="T2",
+            description=None,
+            status=TaskStatus.IN_PROGRESS,
+            priority=TaskPriority.HIGH,
+            due_date=None,
+            created_by=user_id,
+            created_at=datetime.now(UTC),
         )
         t3 = Task(
-            id=uuid4(), project_id=project_id, assignee_id=user_id, title="T3", description=None, 
-            status=TaskStatus.DONE, priority=TaskPriority.HIGH, due_date=None, 
-            created_by=user_id, created_at=datetime.now(UTC)
+            id=uuid4(),
+            project_id=project_id,
+            assignee_id=user_id,
+            title="T3",
+            description=None,
+            status=TaskStatus.DONE,
+            priority=TaskPriority.HIGH,
+            due_date=None,
+            created_by=user_id,
+            created_at=datetime.now(UTC),
         )
-        
+
         await repo.create(t1)
         await repo.create(t2)
         await repo.create(t3)
@@ -122,26 +147,26 @@ async def test_list_by_project_filtering(database_url: str) -> None:
 
     async with database.session_factory() as session:
         repo = SQLAlchemyTaskRepository(session)
-        
+
         # Test basic list
         tasks, total = await repo.list_by_project(project_id)
         assert total == 3
         assert len(tasks) == 3
-        
+
         # Test status filter
         tasks, total = await repo.list_by_project(project_id, status=TaskStatus.IN_PROGRESS)
         assert total == 1
         assert tasks[0].title == "T2"
-        
+
         # Test priority filter
         tasks, total = await repo.list_by_project(project_id, priority=TaskPriority.HIGH)
         assert total == 2
-        
+
         # Test assignee filter
         tasks, total = await repo.list_by_project(project_id, assignee_id=user_id)
         assert total == 1
         assert tasks[0].title == "T3"
-        
+
         # Test pagination
         tasks, total = await repo.list_by_project(project_id, limit=1)
         assert total == 3

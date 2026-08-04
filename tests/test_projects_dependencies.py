@@ -33,7 +33,7 @@ def mock_member_repo() -> AsyncMock:
 
 @pytest.mark.asyncio
 async def test_get_project_or_404_success(mock_project_repo: AsyncMock) -> None:
-    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None) # type: ignore
+    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None)  # type: ignore
     mock_project_repo.get_by_id.return_value = project
 
     result = await get_project_or_404(project.id, mock_project_repo)
@@ -52,12 +52,12 @@ async def test_get_project_or_404_raises(mock_project_repo: AsyncMock) -> None:
 async def test_require_project_member_admin_bypass(
     mock_workspace_repo: AsyncMock, mock_member_repo: AsyncMock
 ) -> None:
-    user = User(uuid4(), "admin@test.com", "Admin", "hash", UserRole.ADMIN, True, None) # type: ignore
-    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None) # type: ignore
-    workspace = Workspace(project.workspace_id, "WS", uuid4(), None) # type: ignore
-    
+    user = User(uuid4(), "admin@test.com", "Admin", "hash", UserRole.ADMIN, True, None)  # type: ignore
+    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None)  # type: ignore
+    workspace = Workspace(project.workspace_id, "WS", uuid4(), None)  # type: ignore
+
     mock_workspace_repo.get_by_id.return_value = workspace
-    
+
     u, p = await require_project_member(user, project, mock_workspace_repo, mock_member_repo)
     assert u == user
     assert p == project
@@ -67,14 +67,14 @@ async def test_require_project_member_admin_bypass(
 async def test_require_project_member_success(
     mock_workspace_repo: AsyncMock, mock_member_repo: AsyncMock
 ) -> None:
-    user = User(uuid4(), "user@test.com", "User", "hash", UserRole.MEMBER, True, None) # type: ignore
-    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None) # type: ignore
-    workspace = Workspace(project.workspace_id, "WS", uuid4(), None) # type: ignore
-    member = WorkspaceMember(workspace.id, user.id, WorkspaceRole.VIEWER, None) # type: ignore
-    
+    user = User(uuid4(), "user@test.com", "User", "hash", UserRole.MEMBER, True, None)  # type: ignore
+    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None)  # type: ignore
+    workspace = Workspace(project.workspace_id, "WS", uuid4(), None)  # type: ignore
+    member = WorkspaceMember(workspace.id, user.id, WorkspaceRole.VIEWER, None)  # type: ignore
+
     mock_workspace_repo.get_by_id.return_value = workspace
     mock_member_repo.get.return_value = member
-    
+
     u, p = await require_project_member(user, project, mock_workspace_repo, mock_member_repo)
     assert u == user
     assert p == project
@@ -84,13 +84,13 @@ async def test_require_project_member_success(
 async def test_require_project_member_denied(
     mock_workspace_repo: AsyncMock, mock_member_repo: AsyncMock
 ) -> None:
-    user = User(uuid4(), "user@test.com", "User", "hash", UserRole.MEMBER, True, None) # type: ignore
-    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None) # type: ignore
-    workspace = Workspace(project.workspace_id, "WS", uuid4(), None) # type: ignore
-    
+    user = User(uuid4(), "user@test.com", "User", "hash", UserRole.MEMBER, True, None)  # type: ignore
+    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None)  # type: ignore
+    workspace = Workspace(project.workspace_id, "WS", uuid4(), None)  # type: ignore
+
     mock_workspace_repo.get_by_id.return_value = workspace
     mock_member_repo.get.return_value = None
-    
+
     with pytest.raises(PermissionDeniedError):
         await require_project_member(user, project, mock_workspace_repo, mock_member_repo)
 
@@ -99,14 +99,14 @@ async def test_require_project_member_denied(
 async def test_require_project_role_success(
     mock_workspace_repo: AsyncMock, mock_member_repo: AsyncMock
 ) -> None:
-    user = User(uuid4(), "user@test.com", "User", "hash", UserRole.MEMBER, True, None) # type: ignore
-    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None) # type: ignore
-    workspace = Workspace(project.workspace_id, "WS", uuid4(), None) # type: ignore
-    member = WorkspaceMember(workspace.id, user.id, WorkspaceRole.EDITOR, None) # type: ignore
-    
+    user = User(uuid4(), "user@test.com", "User", "hash", UserRole.MEMBER, True, None)  # type: ignore
+    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None)  # type: ignore
+    workspace = Workspace(project.workspace_id, "WS", uuid4(), None)  # type: ignore
+    member = WorkspaceMember(workspace.id, user.id, WorkspaceRole.EDITOR, None)  # type: ignore
+
     mock_workspace_repo.get_by_id.return_value = workspace
     mock_member_repo.get.return_value = member
-    
+
     dep = require_project_role(WorkspaceRole.EDITOR)
     u, p = await dep(user, project, mock_workspace_repo, mock_member_repo)
     assert u == user
@@ -116,14 +116,14 @@ async def test_require_project_role_success(
 async def test_require_project_role_denied(
     mock_workspace_repo: AsyncMock, mock_member_repo: AsyncMock
 ) -> None:
-    user = User(uuid4(), "user@test.com", "User", "hash", UserRole.MEMBER, True, None) # type: ignore
-    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None) # type: ignore
-    workspace = Workspace(project.workspace_id, "WS", uuid4(), None) # type: ignore
-    member = WorkspaceMember(workspace.id, user.id, WorkspaceRole.VIEWER, None) # type: ignore
-    
+    user = User(uuid4(), "user@test.com", "User", "hash", UserRole.MEMBER, True, None)  # type: ignore
+    project = Project(uuid4(), uuid4(), "Proj", None, ProjectStatus.ACTIVE, None)  # type: ignore
+    workspace = Workspace(project.workspace_id, "WS", uuid4(), None)  # type: ignore
+    member = WorkspaceMember(workspace.id, user.id, WorkspaceRole.VIEWER, None)  # type: ignore
+
     mock_workspace_repo.get_by_id.return_value = workspace
     mock_member_repo.get.return_value = member
-    
+
     dep = require_project_role(WorkspaceRole.EDITOR)
     with pytest.raises(PermissionDeniedError):
         await dep(user, project, mock_workspace_repo, mock_member_repo)

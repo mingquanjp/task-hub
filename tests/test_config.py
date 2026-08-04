@@ -61,4 +61,4 @@ def test_security_settings_reject_unsafe_token_configuration(
 ) -> None:
     values: dict[str, object] = {"jwt_secret_key": SecretStr("x" * 32), field: value}
     with pytest.raises(ValidationError, match=message):
-        SecuritySettings(**values)
+        SecuritySettings(**values)  # type: ignore

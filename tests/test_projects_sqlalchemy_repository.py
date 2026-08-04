@@ -16,7 +16,11 @@ async def setup_workspace(database: Database) -> tuple[UUID, UUID]:
     user_id = uuid4()
     workspace_id = uuid4()
     async with database.session_factory() as session:
-        session.add(UserModel(id=user_id, email=f"{user_id}@test.com", hashed_password="hash", full_name="Test"))
+        session.add(
+            UserModel(
+                id=user_id, email=f"{user_id}@test.com", hashed_password="hash", full_name="Test"
+            )
+        )
         session.add(WorkspaceModel(id=workspace_id, name="Test WS", owner_id=user_id))
         await session.commit()
     return user_id, workspace_id
@@ -26,7 +30,7 @@ async def setup_workspace(database: Database) -> tuple[UUID, UUID]:
 async def test_repository_crud(database_url: str) -> None:
     database = Database(database_url)
     user_id, workspace_id = await setup_workspace(database)
-    
+
     project = Project(
         id=uuid4(),
         workspace_id=workspace_id,
@@ -42,14 +46,14 @@ async def test_repository_crud(database_url: str) -> None:
         created = await repo.create(project)
         assert created.id == project.id
         await session.commit()
-        
+
     # Get
     async with database.session_factory() as session:
         repo = SQLAlchemyProjectRepository(session)
         fetched = await repo.get_by_id(project.id)
         assert fetched is not None
         assert fetched.name == "Test"
-        
+
     # List
     async with database.session_factory() as session:
         repo = SQLAlchemyProjectRepository(session)
@@ -76,7 +80,7 @@ async def test_repository_crud(database_url: str) -> None:
         deleted = await repo.delete(project.id)
         assert deleted is True
         await session.commit()
-        
+
     async with database.session_factory() as session:
         repo = SQLAlchemyProjectRepository(session)
         assert await repo.get_by_id(project.id) is None

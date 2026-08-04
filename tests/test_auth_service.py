@@ -42,13 +42,13 @@ class FakeRefreshTokenRepository:
         return self.tokens.get(token_hash)
 
     async def create(self, token: object) -> object:
-        self.tokens[token.token_hash] = token
+        self.tokens[token.token_hash] = token  # type: ignore
         return token
 
     async def revoke(self, token_id: object, revoked_at: datetime) -> bool:
         for token in self.tokens.values():
-            if token.id == token_id:
-                self.tokens[token.token_hash] = replace(token, revoked_at=revoked_at)
+            if token.id == token_id:  # type: ignore
+                self.tokens[token.token_hash] = replace(token, revoked_at=revoked_at)  # type: ignore
                 return True
         return False
 
@@ -58,8 +58,8 @@ def make_service() -> tuple[AuthService, FakeUserRepository, FakeRefreshTokenRep
     tokens = FakeRefreshTokenRepository()
 
     service = AuthService(
-        users,
-        tokens,
+        users,  # type: ignore
+        tokens,  # type: ignore
         PasswordHasher(),
         TokenService(SecuritySettings(jwt_secret_key=SecretStr("test-secret-key-" + "x" * 32))),
     )
