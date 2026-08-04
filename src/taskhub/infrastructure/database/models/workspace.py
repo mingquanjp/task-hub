@@ -12,6 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from taskhub.infrastructure.database.base import Base
 
 if TYPE_CHECKING:
+    from taskhub.infrastructure.database.models.project import ProjectModel
     from taskhub.infrastructure.database.models.user import UserModel
     from taskhub.infrastructure.database.models.workspace_member import WorkspaceMemberModel
 
@@ -38,6 +39,11 @@ class WorkspaceModel(Base):
         back_populates="owned_workspaces",
     )
     members: Mapped[list[WorkspaceMemberModel]] = relationship(
+        back_populates="workspace",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    projects: Mapped[list[ProjectModel]] = relationship(
         back_populates="workspace",
         cascade="all, delete-orphan",
         passive_deletes=True,

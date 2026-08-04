@@ -63,3 +63,15 @@ class WorkspaceOwnerRemovalError(ConflictError):
 
 class InvalidWorkspaceRoleError(DomainError):
     """Raised when an invalid role is used for a workspace operation."""
+
+
+class ProjectNotFoundError(ResourceNotFoundError):
+    """Raised when a project is not found."""
+
+
+class ProjectAlreadyArchivedError(ConflictError):
+    """Raised when attempting to archive an already archived project."""
+
+
+class InvalidProjectStateError(ConflictError):
+    """Raised when performing an operation that is invalid for the project's current state."""

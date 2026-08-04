@@ -113,3 +113,6 @@ def require_workspace_role(*allowed_roles: WorkspaceRole) -> Callable[..., Await
 
 
 OwnerWorkspaceUserDep = Annotated[User, Depends(require_workspace_role(WorkspaceRole.OWNER))]
+OwnerOrEditorWorkspaceUserDep = Annotated[
+    User, Depends(require_workspace_role(WorkspaceRole.OWNER, WorkspaceRole.EDITOR))
+]
